@@ -1,24 +1,66 @@
 package main
 
 import (
-	"./network/bcast"
-	"./network/localip"
-	"./network/peers"
-	"flag"
 	"fmt"
-	"os"
-	"time"
+
+	"./elevio"
 )
 
-// We define some custom struct to send over the network.
-// Note that all members we want to transmit must be public. Any private members
-//  will be received as zero-values.
-type HelloMsg struct {
-	Message string
-	Iter    int
+func main() {
+
+	numFloors := 4
+
+	elevio.Init("localhost:15657", numFloors)
+	//panic: dial tcp [::1]:15657: connect: connection refused
+
+	var d elevio.MotorDirection = elevio.MD_Up
+	//elevio.SetMotorDirection(d)
+
+	drv_buttons := make(chan elevio.ButtonEvent)
+	drv_floors := make(chan int)
+	drv_obstr := make(chan bool)
+	drv_stop := make(chan bool)
+
+	go elevio.PollButtons(drv_buttons)
+	go elevio.PollFloorSensor(drv_floors)
+	go elevio.PollObstructionSwitch(drv_obstr)
+	go elevio.PollStopButton(drv_stop)
+
+	for {
+		select {
+		case a := <-drv_buttons:
+			fmt.Printf("%+v\n", a)
+			elevio.SetButtonLamp(a.Button, a.Floor, true)
+
+		case a := <-drv_floors:
+			fmt.Printf("%+v\n", a)
+			if a == numFloors-1 {
+				d = elevio.MD_Down
+			} else if a == 0 {
+				d = elevio.MD_Up
+			}
+			elevio.SetMotorDirection(d)
+
+		case a := <-drv_obstr:
+			fmt.Printf("%+v\n", a)
+			if a {
+				elevio.SetMotorDirection(elevio.MD_Stop)
+			} else {
+				elevio.SetMotorDirection(d)
+			}
+
+		case a := <-drv_stop:
+			fmt.Printf("%+v\n", a)
+			for f := 0; f < numFloors; f++ {
+				for b := elevio.ButtonType(0); b < 3; b++ {
+					elevio.SetButtonLamp(b, f, false)
+				}
+			}
+		}
+	}
 }
 
-func main() {
+/*
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
 	var id string
@@ -78,4 +120,5 @@ func main() {
 			fmt.Printf("Received: %#v\n", a)
 		}
 	}
-}
+
+*/
