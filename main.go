@@ -1,20 +1,39 @@
 package main
 
 import (
-	"fmt"
+	"time"
 
-	"./elevio"
+	"./timer"
 )
 
 func main() {
 
+	timeout := make(chan int)
+	timerinput := make(chan timer.TimerStruct)
+
+	tim := timer.TimerStruct{4000, 1, false}
+
+	timerinput <- tim
+
+	go timer.Timer(timerinput, timeout)
+
+	go func() {
+		time.Sleep(5 * time.Second)
+		tim.Done = true
+	}()
+
+	select {}
+
+}
+
+/*
 	numFloors := 4
 
 	elevio.Init("localhost:15657", numFloors)
 	//panic: dial tcp [::1]:15657: connect: connection refused
 
 	var d elevio.MotorDirection = elevio.MD_Up
-	//elevio.SetMotorDirection(d)
+	elevio.SetMotorDirection(d)
 
 	drv_buttons := make(chan elevio.ButtonEvent)
 	drv_floors := make(chan int)
@@ -60,7 +79,11 @@ func main() {
 	}
 }
 
-/*
+
+
+
+
+
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
 	var id string
