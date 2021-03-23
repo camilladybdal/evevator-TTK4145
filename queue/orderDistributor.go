@@ -5,6 +5,7 @@ package orderDistributor
 // Constants
 const (
 	NumberOfElevators = 3 // Need better implemantation (config fil?)
+	NumberOfFloors    = 4 // also config?
 )
 
 // Structures
@@ -22,13 +23,14 @@ type Order struct {
 // FSM_ORDER_IN ONLY ONE SPACE IN CHANNEL
 // orderIn kan få ordre fra både nettverket og elevio?
 func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderIn <-chan Order) {
+	var localOrders [NumberOfFloors]Order
 
 	// Polle etter knapper her?
 
 	for {
 		select {
 		case order := <-orderIn:
-			switch order.Status {
+			switch localOrders[order.Floor].Floor {
 			case 0:
 				// Calculate and add cost
 				// Update local data
