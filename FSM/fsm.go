@@ -4,34 +4,56 @@ package fsm
 //import timer-module
 //import elevio
 
+import (
+	"./elevio"
+)
+
 type State int
 
 const (
-	IDLE     = 0
+	IDLE State = 0
 	MOVING   = 1
 	DOOROPEN = 2
-	TIMEDOUT = 3
 )
 
-/*function initFSM:
-move down to floor 1
-elev_io init with correct adress and port (can also be done in main)
-*/
-
-/* function runElevator:
-
-state:= IDLE
-floor = 0
-current order = none
-
-
-go elevio.PollButtons(drv_buttons)
-go elevio.PollFloorSensor(drv_floors)
-go elevio.PollObstructionSwitch(drv_obstr)
-go elevio.PollStopButton(drv_stop)
+type FsmChannels struct {
+	ButtonPress    chan elevio.ButtonEvent
+	FloorReached   chan int
+	MotorDirection chan int
+	NewOrder       chan orderDistributer.Order
+}
 
 
 
-look at state-diagram for rough draft on fsm-states and working
+var upQueue [floor]int
+var downQueue [floor]int
 
-*/
+
+/*func PollFloorSensor(receiver chan<- int) {
+	prev := -1
+	for {
+		time.Sleep(_pollRate)
+		v := getFloor()
+		if v != prev && v != -1 {
+			receiver <- v
+		}
+		prev = v
+	}
+}*/
+
+
+func initFSM() {
+	
+	if elevio.getFloor() == -1{
+		elevio.
+	}
+
+
+	State := IDLE
+
+}
+
+func runElevator() {}
+
+
+
