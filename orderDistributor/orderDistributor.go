@@ -6,6 +6,7 @@ package orderDistributor
 const (
 	NumberOfElevators = 3 // Need better implemantation (config fil?)
 	NumberOfFloors    = 4 // also config?
+	maxCost = 999999999
 )
 
 // Structures
@@ -20,8 +21,26 @@ type Order struct {
 // Button struct?
 
 // Functions
+func orderTimer(order Order, timedOut chan<- Order) {
 
-// FSM_ORDER_IN ONLY ONE SPACE IN CHANNEL
+	// Set different timer based on status
+	switch order.Status {
+	case 0:
+
+	case 1:
+
+	case 2:
+
+	case 3:
+
+	case 4:
+
+	case 5:
+
+	}
+
+}
+
 // orderIn kan få ordre fra både nettverket og elevio?
 func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderIn chan Order) {
 	var queue [NumberOfFloors]Order
@@ -32,20 +51,32 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 
 	for {
 		select {
+			// Order pipeline
 		case order := <-orderIn:
 			switch order.Status {
 			case 0:
 				//Kanskje noe?
+				// Log some sort of error?
+				break
 
 			case 1:
 				if queue[order.Floor].Status > 1 {
 					break
 				}
-				// Set queue status = 1
+				// Set queue status = 1 NEEDED?
 				// If own cost not attached, Calculate, add and share (start timer?)
 				// else: update queue with new costs
+				if order.Cost[elevatorId] == maxCost {
+					// TODO: Ask for elevator state and calculate cost using cost function
+					order.Cost[elevatorId] = cost
+					order.Deadline = false
+					// TODO: Share order on network
+					orderTimer(order, orderIn)
+					break
+				}
 
-				// If all costs present queue order status += 1 (or if timer timed out)
+
+				// If all costs present queue order status += 1 (or if deadline == true)
 				orderIn <- order
 			case 2:
 				// If this has lowest cost:
@@ -66,12 +97,18 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 
 			case 5:
 				// Clear order in queue
+				// orderFloor = order.Floor heller bruke denne?
+				queue[order.Floor].Status = 0
+				queue[order.Floor].Direction[0] = false
+				queue[order.Floor].Direction[1] = false
+				queue[order.Floor].Deadline = false
+				for n = NumberOfElevators {
+					queue.order.Floor
+				}
 				// Share on network
 				// Set status to 0
 
 			}
-
 		}
 	}
-
 }
