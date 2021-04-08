@@ -26,3 +26,15 @@ func Timer(interval time.Duration, id int, stopTimer <-chan bool, timedOut chan<
 		}
 	}
 }
+
+func DoorTimer(interval time.Duration, timedOut chan<- bool) {
+	timer := time.NewTimer(interval * time.Second)
+
+	for {
+		<-timer.C
+		timedOut <- true
+		return
+
+	}
+
+}
