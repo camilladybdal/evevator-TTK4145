@@ -1,40 +1,21 @@
 package fsm
 
 import (
-	"fmt"
-
 	"../elevio"
-)
-
-const (
-	NumFloors    int = 4
-	DOOROPENTIME int = 3
-)
-
-type State int
-
-const (
-	IDLE     State = 0
-	MOVING         = 1
-	DOOROPEN       = 2
+	"fmt"
+	. "../types"
 )
 
 type FsmChannels struct {
-	//ButtonPress    chan elevio.ButtonEvent
 	FloorReached   chan int
 	MotorDirection chan int
-	NewOrder       chan orderDistributer.Order
+	NewOrder       chan Order
 	Obstruction    chan bool
 	Stop           chan bool
 	ElevatorState  chan Elevator
 }
 
-type Elevator struct {
-	UpQueue      [NumFloors]int
-	DownQueue    [NumFloors]int
-	CurrentFloor int
-	Direction    int
-}
+//types.go
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Global functions
@@ -50,14 +31,13 @@ func InitFSM(numFloors int) {
 	elevio.SetFloorIndicator(0)
 
 	fmt.Println("FSM Initialized")
-
 }
 
 func runElevator(channels FsmChannels) {
 	State := IDLE
 	var elevator Elevator
 	var currentOrderFloor int
-	var newOrder orderDistributer.Order
+	var newOrder Order
 	var QueueDirection int
 
 	elevator.CurrentFloor = 0
@@ -71,10 +51,10 @@ func runElevator(channels FsmChannels) {
 		case IDLE:
 			select {
 			case newOrder = <-channels.NewOrder:
-				if newOrder.Direction[0] == true {
+				if newOrder.DirectionUp == true {
 					elevator.UpQueue[newOrder.Floor] = 1
 				}
-				if newOrder.Direction[1] == true {
+				if newOrder.DirectionDown == true {
 					elevator.DownQueue[newOrder.Floor] = 1
 				}
 
@@ -84,8 +64,8 @@ func runElevator(channels FsmChannels) {
 				State = MOVING
 				break
 
-				<- channels.Elevatorstate
-				channels.Elevatorstate <- elevator				
+				<-channels.Elevatorstate
+				channels.Elevatorstate <- elevator
 			}
 		case MOVING:
 			select {
@@ -97,15 +77,15 @@ func runElevator(channels FsmChannels) {
 					State = IDLE
 				}
 
-			case floor <- channels.FloorReached:
-				elevator.CurrentFloor = floor
-				elevio.SetFloorIndicator(floor) //hvordan skru av?
+			case elevator.CurrentFloor = <-channels.FloorReached:
+				elevator.CurrentFloor = elevator.CurrentFloor
+				elevio.SetFloorIndicator(elevator.CurrentFloor)
 
 				if elevator.CurrentFloor == currentOrderFloor {
 					elevio.SetMotorDirection(elevio.MD_Stop)
 					State = DOOROPEN
 				}
-				<- channels.Elevatorstate
+				<-channels.Elevatorstate
 				channels.Elevatorstate <- elevator
 			}
 		case DOOROPEN:
@@ -123,10 +103,10 @@ func runElevator(channels FsmChannels) {
 				elevio.SetDoorOpenLamp(true)
 				go timer.DoorTimer(DOOROPENTIME, TimedOut) //er dette lov a?
 			}
-			//drain TimedOut channel
-			<- channels.Elevatorstate
-			channels.Elevatorstate <- elevator
-			<- TimedOut
+			//rain TimedOut channel
+			<-channels.Elevatorstate
+			chanels.Elevatorstate <- elevator
+			<-TimedOut
 		}
 	}
 }
@@ -144,7 +124,7 @@ func getDirection(currentFloor int, destinationFloor int) {
 }
 
 func checkOrdersPresent() {
-	foundOrder = false
+	foundOrder := false
 	for i := 1; i < NumFloors; i++ {
 		if elevator.UpQueue[i] || elevator.DownQueue[i] == 1 {
 			foundOrder = true
