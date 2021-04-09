@@ -1,15 +1,12 @@
 package fsm
 
-//import queue
-//import timer-module
-//import elevio
-
 import (
 	"fmt"
-
 	"../elevio"
 )
 
+var NumFloors int = 4
+var DOOROPENTIME int = 3
 type State int
 
 const (
@@ -33,9 +30,8 @@ type Elevator struct {
 	UpQueue[NumFloors]   int
 	DownQueue[NumFloors] int
 	CurrentFloor 		 int
+	Direction   		 int
 }
-
-var DOOROPENTIME int = 3
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Global functions
@@ -56,50 +52,57 @@ func InitFSM(numFloors int) {
 
 func runElevator(channels FsmChannels) {
 	State := IDLE
-	currentFloor := 0
-	currentOrder orderDistributer.Order
-	
+	var elevator Elevator
+	var currentOrderFloor int 
+	var newOrder orderDistributer.Order
+	var QueueDirection int
+
+	elevator.CurrentFloor := 0
 
 	go elevio.PollFloorSensor(channels.FloorReached)
 	go elevio.PollObstructionSwitch(channels.Obstruction)
 	go elevio.PollStopButton(channels.Stop)
 
+
 	for {
 		select {
+
 		case IDLE:
 			select {
-			case currentOrder = <-channels.NewOrder:
-				channels.MotorDirection <- getDirection(currentFloor, currentOrder.floor)
+			case newOrder =  <-channels.NewOrder:
+				if newOrder.Direction[0] == true{
+					Elevator.UpQueue[newOrder.Floor] = 1
+				}
+				if newOrder.Direction[1] == true {
+					Elevator.DownQueue[newOrder.Floor] = 1
+				}
+		
 
-				//add to down or up- queue
-				
-
-				//endre state til MOVING
+			case checkOrdersPresent() == true:		
+				currentOrderFloor = queueSearch(QueueDirection)
+				channels.MotorDirection <- getDirection(Elevator.CurrentFloor, currentOrderFloor)
 				State = MOVING
-
-				//update elevator info (?) hva er egt tanken her
 				break
 			}
-		
 		case MOVING:
 			select{
-			case direction := <- channels.MotorDirection:
-				elevio.SetMotorDirection(direction)
+			case Elevator.Direction = <- channels.MotorDirection:
+				elevio.SetMotorDirection(Elevator.Direction)
+				QueueDirection = Elevator.Direction
 
-				if direction == 0 {
+				if Elevator.Direction == elevio.MD_Stop {
 					State = IDLE
 				}
 
 			case floor <- channels.FloorReached:
-				currentFloor = floor
+				Elevator.CurrentFloor = floor
 				elevio.SetFloorIndicator(floor) //hvordan skru av?
 
-				if currentFloor == currentOrder.floor{
+				if Elevator.CurrentFloor == currentOrderFloor{
 					elevio.SetMotorDirection(elevio.MD_Stop)
 					State = DOOROPEN
 				}	
 			}
-
 		case DOOROPEN:
 			elevio.SetDoorOpenLamp(true)
 
@@ -111,25 +114,13 @@ func runElevator(channels FsmChannels) {
 				State := IDLE
 				break
 			}
-
-
 			if <- channels.Obstruction{
 				elevio.SetDoorOpenLamp(true)
 				go timer.DoorTimer(DOOROPENTIME,TimedOut)  //er dette lov a?
 			}
-
 			//drain TimedOut channel
-
 		}
-
-		/*
-		case <- Stop
-			elevio.SetMotorDirection(elevio.MD_Stop)
-			elevio.SetStopLamp(true)
-		*/
-
 	}
-
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -145,3 +136,59 @@ func getDirection(currentFloor int, destinationFloor int ){
 		return elevio.MD_Up
 	}
 }
+
+func checkOrdersPresent(){
+	foundOrder = false
+	for i := 1 ; i< NumFloors; i++{
+		if Elevator.UpQueue[i] || Elevator.DownQueue[i] == 1{
+			foundOrder = true
+		}
+	}
+	return foundOrder
+}
+
+func queueSearch(QueueDirection int){
+	nextFloor := 0
+	if QueueDirection == 1{
+		for floor := Elevator.CurrentFloor; floor < NumFloors; floor++{
+			if Elevator.UpQueue[floor] == 1{
+				nextFloor = Elevator.UpQueue[floor]
+				break
+			}
+		}
+		for floor := NumFloors-1; floor >= 0; floor--{
+			if Elevator.DownQueue[floor] == 1{
+				nextFloor = Elevator.DownQueue[floor]
+				break
+			}
+		}
+		for floor := 0; floor < Elevator.CurrentFloor; floor++{
+			if Elevator.UpQueue[floor] == 1{
+				nextFloor = Elevator.UpQueue[floor]
+				break
+			}
+		}
+	}
+	if QueueDirection == -1{
+		for floor := Elevator.CurrentFloor; floor >= 0; floor--{
+			if Elevator.DownQueue[floor] == 1{
+				nextFloor = Elevator.DownQueue[floor]
+				break
+			}
+		}
+		for floor := 0; floor < NumFloors; floor++{
+			if Elevator.UpQueue[floor] == 1{
+				nextFloor = Elevator.UpQueue[floor]
+				break
+			}
+		}
+		for floor := Elevator.CurrentFloor; floor >= 0; floor --{
+			if Elevator.DownQueue[floor] == 1{
+				nextFloor = Elevator.DownQueue[floor]
+				break
+			}	
+		}
+	}
+	return nextFloor
+}
+
