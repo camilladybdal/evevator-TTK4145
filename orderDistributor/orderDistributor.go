@@ -12,10 +12,11 @@ const (
 // Structures
 type Order struct {
 	Floor     int
-	Direction [2]bool
+	DirectionUp bool
+	DirectionDown bool
 	Cost      [NumberOfElevators]int
 	Status    int // 0: No active order , 1: waiting for cost, 2: unconfirmed, 3: confirmed, 4: mine, 5: done
-	Deadline  int // Time? or Id?
+	TimedOut  int // Time? or Id?
 }
 
 // Button struct?
@@ -63,51 +64,80 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 				if queue[order.Floor].Status > 1 {
 					break
 				}
-				// Set queue status = 1 NEEDED?
 				// If own cost not attached, Calculate, add and share (start timer?)
 				// else: update queue with new costs
 				if order.Cost[elevatorId] == maxCost {
 					// TODO: Ask for elevator state and calculate cost using cost function
 					order.Cost[elevatorId] = cost
-					order.Deadline = false
+					order.TimedOut = false
 					// TODO: Share order on network
+					queue[order.Floor] = order
 					orderTimer(order, orderIn)
+				}
+
+				// Not sure if this is the best solution
+				allCostsPresent := true
+				for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
+					if order.Cost[elevatorNumber] == maxCost {
+						allCostsPresent = false
+					}
+				}
+				if allCostsPresent || order.TimedOut {
+					order.Status += 1
+					queue[order.Floor] = order
+					orderIn <- order
+				}
+				break
+
+			case 2:
+				if order.Status > 2 {
 					break
 				}
 
-
-				// If all costs present queue order status += 1 (or if deadline == true)
-				orderIn <- order
-			case 2:
-				// If this has lowest cost:
-				// status = 3, share on network, status = 4
-				orderIn <- order
-
-				// else:
-				// Set timer?
+				hasLowestCost := true
+				for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
+					if order.Cost[elevatorNumber]*10+elevatorNumber < order.Cost[elevatorId]*10+elevatorId {
+						hasLowestCost = false
+					}
+				}
+				if hasLowestCost{
+					order.Status = 3
+					// TODO share on network
+					order.Status = 4
+					queue[order.Floor] = order
+					orderIn <- order
+				}
+				else {
+					orderTimer(order, orderIn)
+				}
+				break
 
 			case 3:
-				// if not 4 or 5
-				// Set status to 3
-				// Set finish timer
-
+				if order.Status > 3 {
+					break
+				}
+				order.TimedOut = false
+				queue[order.Floor] = order
+				orderTimer(order, orderIn)
+				break
 			case 4:
 				orderOut <- order
-				// Set timer
+
+				orderTimer(order, orderIn)
+				break
 
 			case 5:
 				// Clear order in queue
-				// orderFloor = order.Floor heller bruke denne?
-				queue[order.Floor].Status = 0
-				queue[order.Floor].Direction[0] = false
-				queue[order.Floor].Direction[1] = false
-				queue[order.Floor].Deadline = false
-				for n = NumberOfElevators {
-					queue.order.Floor
+				order.Status = 0
+				order.DirectionUp = false
+				order.DirectionDown = false
+				order.TimedOut = false
+				for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
+					order.Cost[elevatorNumber] = maxCost
 				}
-				// Share on network
-				// Set status to 0
-
+				queue[order.Floor] = order
+				// TODO Share on network
+				break
 			}
 		}
 	}
