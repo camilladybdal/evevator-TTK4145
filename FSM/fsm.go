@@ -35,9 +35,8 @@ func InitFSM(numFloors int) {
 
 func runElevator(channels FsmChannels) {
 	State := IDLE
-	var elevator Elevator
-	var currentOrderFloor int
-	var newOrder Order
+	var elevatorInfo Elevator
+	//var currentOrderFloor int
 	var QueueDirection int
 
 	elevator.CurrentFloor = 0
@@ -46,69 +45,28 @@ func runElevator(channels FsmChannels) {
 	go elevio.PollObstructionSwitch(channels.Obstruction)
 	go elevio.PollStopButton(channels.Stop)
 
-	for {
-		switch State {
-		case IDLE:
-			select {
-			case newOrder = <-channels.NewOrder:
-				if newOrder.DirectionUp == true {
-					elevator.UpQueue[newOrder.Floor] = 1
-				}
-				if newOrder.DirectionDown == true {
-					elevator.DownQueue[newOrder.Floor] = 1
-				}
+	//for select switch case
+	for{
+		select{
+		case newOrder := <- channels.NewOrder:
 
-			case checkOrdersPresent() == true:
-				currentOrderFloor = queueSearch(QueueDirection)
-				channels.MotorDirection <- getDirection(elevator.CurrentFloor, currentOrderFloor)
-				State = MOVING
-				break
-
-				<-channels.Elevatorstate
-				channels.Elevatorstate <- elevator
+			//legger til i køen
+			if newOrder.DirectionUp == true {
+				elevatorInfo.UpQueue[newOrder.Floor] = 1
 			}
-		case MOVING:
-			select {
-			case elevator.Direction = <-channels.MotorDirection:
-				elevio.SetMotorDirection(elevator.Direction)
-				QueueDirection = elevator.Direction
-
-				if Elevator.Direction == elevio.MD_Stop {
-					State = IDLE
-				}
-
-			case elevator.CurrentFloor = <-channels.FloorReached:
-				elevator.CurrentFloor = elevator.CurrentFloor
-				elevio.SetFloorIndicator(elevator.CurrentFloor)
-
-				if elevator.CurrentFloor == currentOrderFloor {
-					elevio.SetMotorDirection(elevio.MD_Stop)
-					State = DOOROPEN
-				}
-				<-channels.Elevatorstate
-				channels.Elevatorstate <- elevator
+			if newOrder.DirectionDown == true {
+				elevatorInfo.DownQueue[newOrder.Floor] = 1
 			}
-		case DOOROPEN:
-			elevio.SetDoorOpenLamp(true)
 
-			TimedOut := make(chan bool)
-			go timer.DoorTimer(DOOROPENTIME, TimedOut)
+			switch State{
+			case IDLE:
+				
+				
 
-			if <-TimedOut {
-				elevio.SetDoorOpenLamp(false)
-				State := IDLE
-				break
 			}
-			if <-channels.Obstruction {
-				elevio.SetDoorOpenLamp(true)
-				go timer.DoorTimer(DOOROPENTIME, TimedOut) //er dette lov a?
-			}
-			//rain TimedOut channel
-			<-channels.Elevatorstate
-			chanels.Elevatorstate <- elevator
-			<-TimedOut
 		}
 	}
+	
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
