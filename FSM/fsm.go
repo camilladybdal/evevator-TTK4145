@@ -10,7 +10,7 @@ import (
 	"../elevio"
 )
 
-type state int
+type State int
 
 const (
 	IDLE     state = 0
@@ -18,16 +18,24 @@ const (
 	DOOROPEN       = 2
 )
 
+
 type FsmChannels struct {
 	//ButtonPress    chan elevio.ButtonEvent
 	FloorReached   chan int
 	MotorDirection chan int
 	NewOrder       chan orderDistributer.Order
+	Obstruction    chan bool
+	Stop	       chan bool
 }
 
-//hvordan lagrer vi numfloors som global var?
-var upQueue [4]int
-var downQueue [4]int
+
+type Elevator struct {
+	UpQueue[NumFloors]   int
+	DownQueue[NumFloors] int
+	CurrentFloor 		 int
+}
+
+var DOOROPENTIME int = 3
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Global functions
@@ -47,16 +55,14 @@ func InitFSM(numFloors int) {
 }
 
 func runElevator(channels FsmChannels) {
-	state := IDLE
+	State := IDLE
 	currentFloor := 0
 	currentOrder orderDistributer.Order
-
-	drv_obstr := make(chan bool)
-	drv_stop := make(chan bool)
+	
 
 	go elevio.PollFloorSensor(channels.FloorReached)
-	go elevio.PollObstructionSwitch(drv_obstr)
-	go elevio.PollStopButton(drv_stop)
+	go elevio.PollObstructionSwitch(channels.Obstruction)
+	go elevio.PollStopButton(channels.Stop)
 
 	for {
 		select {
@@ -65,8 +71,11 @@ func runElevator(channels FsmChannels) {
 			case currentOrder = <-channels.NewOrder:
 				channels.MotorDirection <- getDirection(currentFloor, currentOrder.floor)
 
+				//add to down or up- queue
+				
+
 				//endre state til MOVING
-				state = MOVING
+				State = MOVING
 
 				//update elevator info (?) hva er egt tanken her
 				break
@@ -78,7 +87,7 @@ func runElevator(channels FsmChannels) {
 				elevio.SetMotorDirection(direction)
 
 				if direction == 0 {
-					state = IDLE
+					State = IDLE
 				}
 
 			case floor <- channels.FloorReached:
@@ -87,34 +96,34 @@ func runElevator(channels FsmChannels) {
 
 				if currentFloor == currentOrder.floor{
 					elevio.SetMotorDirection(elevio.MD_Stop)
-					state = DOOROPEN
+					State = DOOROPEN
 				}	
 			}
 
 		case DOOROPEN:
-			//open the door, start door-timer
-			//after door-timer, close the door. 
-			//if obcstruction: keep door open
 			elevio.SetDoorOpenLamp(true)
 
 			TimedOut := make(chan bool)
-			go timer.DoorTimer(3, TimedOut)
+			go timer.DoorTimer(DOOROPENTIME, TimedOut)
 
 			if <-TimedOut {
 				elevio.SetDoorOpenLamp(false)
-				state := IDLE
+				State := IDLE
+				break
 			}
 
 
-			if <- drv_obstr{
+			if <- channels.Obstruction{
 				elevio.SetDoorOpenLamp(true)
-				go timer.DoorTimer(3,TimedOut)  //er dette lov a?
+				go timer.DoorTimer(DOOROPENTIME,TimedOut)  //er dette lov a?
 			}
+
+			//drain TimedOut channel
 
 		}
 
 		/*
-		case <- drv_stop
+		case <- Stop
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetStopLamp(true)
 		*/
