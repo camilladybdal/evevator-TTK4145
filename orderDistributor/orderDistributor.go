@@ -4,6 +4,8 @@ package orderDistributor
 import (
 	"time"
 	"../FSM"
+	"../types"
+
 )
 
 // Constants
