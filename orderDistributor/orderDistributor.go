@@ -52,7 +52,7 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 		case order := <-orderIn:
 			switch order.Status {
 			case 0:
-				//Kanskje noe?
+				// Kanskje noe?
 				// Log some sort of error?
 				break
 
@@ -121,6 +121,7 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 				queue[order.Floor] = order
 				go orderTimer(order, orderIn, 10) // Må endres til et uttrykk med costen
 				break
+
 			case 4:
 				if queue[order.Floor].Status > 4{
 					break
