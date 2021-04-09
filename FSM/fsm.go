@@ -57,7 +57,7 @@ func runElevator(channels FsmChannels) {
 	var newOrder orderDistributer.Order
 	var QueueDirection int
 
-	elevator.CurrentFloor := 0
+	Elevator.CurrentFloor := 0
 
 	go elevio.PollFloorSensor(channels.FloorReached)
 	go elevio.PollObstructionSwitch(channels.Obstruction)
