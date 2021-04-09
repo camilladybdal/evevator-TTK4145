@@ -1,6 +1,9 @@
 package orderDistributor
 
 // imports
+import (
+	"time"
+)
 
 // Constants
 const (
@@ -22,24 +25,11 @@ type Order struct {
 // Button struct?
 
 // Functions
-func orderTimer(order Order, timedOut chan<- Order) {
+func orderTimer(order Order, timedOut chan<- Order, duration int) {
 
-	// Set different timer based on status
-	switch order.Status {
-	case 0:
-
-	case 1:
-
-	case 2:
-
-	case 3:
-
-	case 4:
-
-	case 5:
-
-	}
-
+	time.Sleep(duration*time.Second)
+	order.TimedOut = true
+	timedOut <- order
 }
 
 // orderIn kan få ordre fra både nettverket og elevio?
@@ -72,7 +62,7 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 					order.TimedOut = false
 					// TODO: Share order on network
 					queue[order.Floor] = order
-					orderTimer(order, orderIn)
+					go orderTimer(order, orderIn, 3)
 				}
 
 				// Not sure if this is the best solution
@@ -90,7 +80,7 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 				break
 
 			case 2:
-				if order.Status > 2 {
+				if queue[order.Floor].Status > 2 {
 					break
 				}
 
@@ -100,30 +90,44 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 						hasLowestCost = false
 					}
 				}
-				if hasLowestCost{
+				if hasLowestCost {
 					order.Status = 3
 					// TODO share on network
 					order.Status = 4
 					queue[order.Floor] = order
 					orderIn <- order
-				}
-				else {
-					orderTimer(order, orderIn)
+				} else {
+					go orderTimer(order, orderIn, 3)
 				}
 				break
 
 			case 3:
-				if order.Status > 3 {
+				if queue[order.Floor].Status > 3 {
 					break
 				}
+				if order.TimedOut = true {
+					order.Status = 4
+					orderIn <- order
+					break
+				}
+
 				order.TimedOut = false
 				queue[order.Floor] = order
-				orderTimer(order, orderIn)
+				go orderTimer(order, orderIn, 10) // Må endres til et uttrykk med costen
 				break
 			case 4:
+				if queue[order.Floor].Status > 4{
+					break
+				}
+				if order.TimedOut = true {
+					order.Cost[elevatorId] = maxCost
+					order.Status = 3
+					// TODO share on network
+					break
+				}
 				orderOut <- order
 
-				orderTimer(order, orderIn)
+				go orderTimer(order, orderIn, 10) // Må også endres
 				break
 
 			case 5:
