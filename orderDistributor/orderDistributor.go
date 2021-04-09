@@ -3,6 +3,7 @@ package orderDistributor
 // imports
 import (
 	"time"
+	"../FSM"
 )
 
 // Constants
@@ -10,6 +11,7 @@ const (
 	NumberOfElevators = 3 // Need better implemantation (config fil?)
 	NumberOfFloors    = 4 // also config?
 	maxCost = 999999999
+	elevatorId = 0
 )
 
 // Structures
@@ -19,7 +21,7 @@ type Order struct {
 	DirectionDown bool
 	Cost      [NumberOfElevators]int
 	Status    int // 0: No active order , 1: waiting for cost, 2: unconfirmed, 3: confirmed, 4: mine, 5: done
-	TimedOut  int // Time? or Id?
+	TimedOut  bool // Time? or Id?
 }
 
 // Button struct?
@@ -27,13 +29,17 @@ type Order struct {
 // Functions
 func orderTimer(order Order, timedOut chan<- Order, duration int) {
 
-	time.Sleep(duration*time.Second)
+	// Quick fix! NEED TO CHANGE
+	for duration > 0 {
+		time.Sleep(time.Second)
+		duration--
+	}
 	order.TimedOut = true
 	timedOut <- order
 }
 
 // orderIn kan få ordre fra både nettverket og elevio?
-func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderIn chan Order) {
+func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderIn chan Order, elevatorState <-chan fsm.Elevator) {
 	var queue [NumberOfFloors]Order
 
 	for floor := 0; floor < NumberOfFloors; floor++ {
