@@ -1,10 +1,12 @@
 package costfunc 
 
+/* Based on minimal movement. Should it be beased on minimal time instead? */
+
 //need to know: direction of elevator, what floor the elevator is in
 func costfunction(neworder <-chan Order, localelevstate){
 	cost := localelevstate.floor - order.floor
 	if cost == 0 {
-		return cost //(broadcast dette)
+		return cost 
 	}
 	if cost > 0 {
 		if localelevstate.motordir != -1 {
@@ -17,13 +19,8 @@ func costfunction(neworder <-chan Order, localelevstate){
 			cost = cost + numFloors
 		}
 	}
-	return cost //(broadcast dette)
-
+	return cost 
 }
 
-func minimumcost(order <-chan Order, costotherelev){
-	if mycost < cost1 && mycost < cost2 {
-		return 1
-	}
-	return 0
-}
+
+
