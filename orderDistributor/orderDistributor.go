@@ -105,7 +105,7 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 				if queue[order.Floor].Status > 3 {
 					break
 				}
-				if order.TimedOut = true {
+				if order.TimedOut == true {
 					order.Status = 4
 					orderIn <- order
 					break
@@ -119,7 +119,7 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 				if queue[order.Floor].Status > 4{
 					break
 				}
-				if order.TimedOut = true {
+				if order.TimedOut == true {
 					order.Cost[elevatorId] = maxCost
 					order.Status = 3
 					// TODO share on network
