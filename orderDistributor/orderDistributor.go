@@ -8,26 +8,6 @@ import (
 
 )
 
-// Constants
-const (
-	NumberOfElevators = 3 // Need better implemantation (config fil?)
-	NumberOfFloors    = 4 // also config?
-	maxCost = 999999999
-	elevatorId = 0
-)
-
-// Structures
-type Order struct {
-	Floor     int
-	DirectionUp bool
-	DirectionDown bool
-	Cost      [NumberOfElevators]int
-	Status    int // 0: No active order , 1: waiting for cost, 2: unconfirmed, 3: confirmed, 4: mine, 5: done
-	TimedOut  bool // Time? or Id?
-}
-
-// Button struct?
-
 // Functions
 func orderTimer(order Order, timedOut chan<- Order, duration int) {
 
@@ -53,13 +33,13 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 			// Order pipeline
 		case order := <-orderIn:
 			switch order.Status {
-			case 0:
+			case noActiveOrder:
 				// Kanskje noe?
 				// Log some sort of error?
 				break
 
-			case 1:
-				if queue[order.Floor].Status > 1 {
+			case waitingForCost:
+				if queue[order.Floor].Status > waitingForCost {
 					break
 				}
 				// If own cost not attached, Calculate, add and share (start timer?)
@@ -81,14 +61,14 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 					}
 				}
 				if allCostsPresent || order.TimedOut {
-					order.Status += 1
+					order.Status = unconfirmed
 					queue[order.Floor] = order
 					orderIn <- order
 				}
 				break
 
-			case 2:
-				if queue[order.Floor].Status > 2 {
+			case unconfirmed:
+				if queue[order.Floor].Status > unconfirmed {
 					break
 				}
 
@@ -99,9 +79,9 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 					}
 				}
 				if hasLowestCost {
-					order.Status = 3
+					order.Status = confirmed
 					// TODO share on network
-					order.Status = 4
+					order.Status = mine
 					queue[order.Floor] = order
 					orderIn <- order
 				} else {
@@ -109,12 +89,12 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 				}
 				break
 
-			case 3:
-				if queue[order.Floor].Status > 3 {
+			case confirmed:
+				if queue[order.Floor].Status > confirmed {
 					break
 				}
 				if order.TimedOut == true {
-					order.Status = 4
+					order.Status = mine
 					orderIn <- order
 					break
 				}
@@ -124,13 +104,13 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 				go orderTimer(order, orderIn, 10) // Må endres til et uttrykk med costen
 				break
 
-			case 4:
-				if queue[order.Floor].Status > 4{
+			case mine:
+				if queue[order.Floor].Status > mine {
 					break
 				}
 				if order.TimedOut == true {
 					order.Cost[elevatorId] = maxCost
-					order.Status = 3
+					order.Status = unconfirmed
 					// TODO share on network
 					break
 				}
@@ -139,9 +119,9 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 				go orderTimer(order, orderIn, 10) // Må også endres
 				break
 
-			case 5:
+			case done:
 				// Clear order in queue
-				order.Status = 0
+				order.Status = noActiveOrder
 				order.DirectionUp = false
 				order.DirectionDown = false
 				order.TimedOut = false

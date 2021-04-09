@@ -28,6 +28,16 @@ const (
 	elevatorId        = 0
 )
 
+type Status int
+const (
+	noActiveOrder Status = 0
+	waitingForCost		 = 1
+	unconfirmed 		 = 2
+	confirmed 			 = 3
+	mine 				 = 4
+	done				 = 5
+)
+
 // Structures
 type Order struct {
 	Floor         int
@@ -37,3 +47,5 @@ type Order struct {
 	Status        int  // 0: No active order , 1: waiting for cost, 2: unconfirmed, 3: confirmed, 4: mine, 5: done
 	TimedOut      bool // Time? or Id?
 }
+
+// Button struct?
