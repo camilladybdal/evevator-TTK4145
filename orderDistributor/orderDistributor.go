@@ -8,7 +8,6 @@ import (
 
 )
 
-// Functions
 func orderTimer(order Order, timedOut chan<- Order, duration int) {
 
 	// Quick fix! NEED TO CHANGE
@@ -20,9 +19,10 @@ func orderTimer(order Order, timedOut chan<- Order, duration int) {
 	timedOut <- order
 }
 
-// orderIn kan få ordre fra både nettverket og elevio?
-func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderIn chan Order, elevatorState <-chan fsm.Elevator) {
+// orderIn kan få ordre fra både nettverket og elevio
+func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderIn chan Order, getElevatorState <-chan types.Elevator) {
 	var queue [NumberOfFloors]Order
+	var elevatorState types.Elevator
 
 	for floor := 0; floor < NumberOfFloors; floor++ {
 		queue[floor].Floor = floor
@@ -46,6 +46,7 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 				// else: update queue with new costs
 				if order.Cost[elevatorId] == maxCost {
 					// TODO: Ask for elevator state and calculate cost using cost function
+					cost = costfnc.Costfunction(elevatorState, order)
 					order.Cost[elevatorId] = cost
 					order.TimedOut = false
 					// TODO: Share order on network
@@ -132,6 +133,12 @@ func OrderDistributor(orderOut chan<- Order, orderExpedited <-chan Order, orderI
 				// TODO Share on network
 				break
 			}
+			break
+
+		// Getting the latest elevatorState
+		case elevatorState = <- getElevatorState:
+			break
+
 		}
 	}
 }
