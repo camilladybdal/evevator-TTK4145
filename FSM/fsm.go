@@ -25,27 +25,26 @@ func InitFSM(numFloors int) {
 
 func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<- Elevator) {
 	State := IDLE
-	var elevatorInfo channels.ElevatorState
-	QueueDirection := Stop
-	elevator.CurrentFloor = 0
+	var elevatorInfo Elevator
+	elevatorInfo.CurrentFloor = 0
+	QueueDirection := elevio.MD_Stop
 
 	var nextFloor int
 	var obstructed bool
 
 	go elevio.PollFloorSensor(channels.FloorReached)
 	go elevio.PollObstructionSwitch(channels.Obstruction)
-	//go elevio.PollStopButton(channels.Stop)
 
 	//for select switch case
 	for{
 		select{
 		case newOrder := <- channels.NewOrder:
-			fmt.println("New order to floor: ", NewOrder.Floor)
+			fmt.Println("New order to floor: ", newOrder.Floor)
 
 			switch State{
 			case IDLE:
 				//sjekk om du er i den etasjen fra før av
-				if elevator.CurrentFloor == newOrder.Floor{
+				if elevatorInfo.CurrentFloor == newOrder.Floor{
 
 					elevio.SetDoorOpenLamp(true)
 					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut) 
@@ -56,22 +55,23 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				} else {
 				
 					//legger til i køen
-					if newOrder.DirectionUp == true |  newOrder.CabOrder == true{
+					if newOrder.DirectionUp == true ||  newOrder.CabOrder == true{
 						elevatorInfo.UpQueue[newOrder.Floor] = 1
 					}
-					if newOrder.DirectionDown == true |  newOrder.CabOrder == true{
+					if newOrder.DirectionDown == true ||  newOrder.CabOrder == true{
 						elevatorInfo.DownQueue[newOrder.Floor] = 1
 					}
 
-					nextFloor := queueSearch(QueueDirection, elevatorInfo)
-					dir := getDirection(elevator.CurrentFloor, nextFloor)
+					nextFloor = queueSearch(QueueDirection, elevatorInfo)
+					dir := getDirection(elevatorInfo.CurrentFloor, nextFloor)
 					elevio.SetMotorDirection(dir)
+
 					QueueDirection = dir
 					elevatorInfo.Direction = dir	
 
 					
 					//Start MotorStopTimer 
-					go timer.StoppableTimer(PASSINGFLOORTIME, 1, channels.StopMotorTimer, channels.MotorTimedOut)
+					go StoppableTimer(PASSINGFLOORTIME, 1, channels.StopMotorTimer, channels.MotorTimedOut)
 					fmt.Println("Started motortimer")
 					State = MOVING
 
@@ -80,10 +80,10 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				}
 			case MOVING:
 					//legger til i køen
-				if newOrder.DirectionUp == true | newOrder.CabOrder == true{
+				if newOrder.DirectionUp == true || newOrder.CabOrder == true{
 					elevatorInfo.UpQueue[newOrder.Floor] = 1
 				}
-				if newOrder.DirectionDown == true | newOrder.CabOrder == true{ {
+				if newOrder.DirectionDown == true || newOrder.CabOrder == true{ 
 					elevatorInfo.DownQueue[newOrder.Floor] = 1
 				}
 
@@ -94,12 +94,12 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				ElevState <- elevatorInfo	
 					
 			case DOOROPEN:
-				if elevator.CurrentFloor == newOrder.Floor{
+				if elevatorInfo.CurrentFloor == newOrder.Floor{
 
 					elevio.SetDoorOpenLamp(true)
 					CountDownTimer(DOOROPENTIME, channels.DoorTimedOut) 
 					fmt.Println("Started Doortimer")
-					removeFromQueue(elevatorInfo.CurrentFloor)
+					removeFromQueue(elevatorInfo)
 
 					//send a completed order message to OrderDistributed
 					NewOrder.Status = Done
@@ -107,10 +107,10 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 				} else {
 					//legger til i køen
-					if newOrder.DirectionUp == true | newOrder.CabOrder == true {
+					if newOrder.DirectionUp == true || newOrder.CabOrder == true {
 						elevatorInfo.UpQueue[newOrder.Floor] = 1
 					}
-					if newOrder.DirectionDown == true | newOrder.CabOrder == true{
+					if newOrder.DirectionDown == true || newOrder.CabOrder == true{
 						elevatorInfo.DownQueue[newOrder.Floor] = 1
 					}
 					//update elev-info
@@ -121,10 +121,12 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 
 
+
 		case floorArrival := <- channels.FloorReached:
-			fmt.println("Arriving at floor: ", floorArrival)
+			fmt.Println("Arriving at floor: ", floorArrival)
 			elevatorInfo.CurrentFloor = floorArrival
 			SetFloorIndicator(floorArrival)
+
 			elevatorInfo.CurrentFloor = floorArrival
 
 			switch State{
@@ -136,11 +138,11 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 					//Stop motorTimer
 				    channels.StopMotorTimer <- true
-					fmt.println("Started Motortimer")
+					fmt.Println("Started Motortimer")
 
 					//open door
 					SetDoorOpenLamp(true)
-					removeFromQueue(elevatorInfo.CurrentFloor)
+					removeFromQueue(elevatorInfo)
 					
 					//send a completed order message to OrderDistributed
 					var Expidized_order Order
@@ -150,7 +152,7 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 					//starte door-timer
 					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut)
-					fmt.println("Started doortimer")
+					fmt.Println("Started doortimer")
 					State = DOOROPEN
 
 					//update elev-info
@@ -158,8 +160,8 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				} else {
 					//Restart motorTimer
 					channels.StopMotorTimer <- true
-					go timer.StoppableTimer(PASSINGFLOORTIME, 1, channels.StopMotorTimer, channels.MotorTimedOut)
-					fmt.println("Restarted Motortimer")
+					go StoppableTimer(PASSINGFLOORTIME, 1, channels.StopMotorTimer, channels.MotorTimedOut)
+					fmt.Println("Restarted Motortimer")
 				}
 			case DOOROPEN:
 			case MOTORSTOP:
@@ -175,7 +177,7 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 		
 		case closeDoor := <- channels.DoorTimedOut:
-			fmt.println("Door has timedout")
+			fmt.Println("Door has timedout")
 			switch State{
 			case IDLE:
 			case MOVING:
@@ -183,7 +185,7 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 				if obstructed == true{
 					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut)
-					fmt.println("Started doortimer")
+					fmt.Println("Started doortimer")
 					break
 				}
 
@@ -196,7 +198,7 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					elevatorInfo.Direction = dir
 
 					//start motor-timer
-					go timer.StoppableTimer(PASSINGFLOORTIME, 1, channels.StopMotorTimer, channels.MotorTimedOut)
+					go StoppableTimer(PASSINGFLOORTIME, 1, channels.StopMotorTimer, channels.MotorTimedOut)
 					fmt.Println("Started motortimer")
 					State = MOVING
 
@@ -213,7 +215,7 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 		case obstructed = <- chanels.Obstruction:
 
 		case motorStop := <- channels.MotorTimedOut:
-			fmt.println("Motorstop detected")
+			fmt.Println("Motorstop detected")
 
 			//tell OrderDistributer that I have motorstop 
 			elevatorInfo.Motorstop = true
@@ -235,7 +237,7 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 // Local functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-func getDirection(currentFloor int, destinationFloor int) {
+func getDirection(currentFloor int, destinationFloor int) elevio.MotorDirection {
 	if currentFloor-destinationFloor > 0 {
 		return elevio.MD_Down
 	} else {
@@ -243,7 +245,7 @@ func getDirection(currentFloor int, destinationFloor int) {
 	}
 }
 
-func checkOrdersPresent(elevator Elevator) {
+func checkOrdersPresent(elevator Elevator) bool{
 	foundOrder := false
 	for i := 1; i < NumFloors; i++ {
 		if elevator.UpQueue[i] || elevator.DownQueue[i] == 1 {
@@ -253,7 +255,7 @@ func checkOrdersPresent(elevator Elevator) {
 	return foundOrder
 }
 
-func queueSearch(QueueDirection int, elevator Elevator) {
+func queueSearch(QueueDirection int, elevator Elevator) int {
 	nextFloor := 0
 
 	//first time
@@ -305,17 +307,14 @@ func queueSearch(QueueDirection int, elevator Elevator) {
 	return nextFloor
 }
 
-func removeFromQueue(Floor int){
-	if elevator.Direction == Up {
-		elevator.UpQueue[Floor] = 0
-	}else{
-		elevator.DownQueue[Floor] = 0
-	}
+func removeFromQueue(elevator Elevator){
+		elevator.UpQueue[elevator.Floor] = 0
+		elevator.DownQueue[elevator.Floor] = 0
 }
 
-func emptyQueue(elevatorInfo Elevator){
+func emptyQueue(elevator Elevator){
 	for floor := 0; floor < NumFloors; floor++ {
-		elevatorInfo.UpQueue[floor]=0
-		elevatorInfo.DownQueue[floor]=0
+		elevator.UpQueue[floor]=0
+		elevator.DownQueue[floor]=0
 	}
 }

@@ -1,9 +1,13 @@
 package types
 
+import (
+	"time"
+)
+
 const (
 	NumFloors   	 int = 4
-	DOOROPENTIME 	 int = 3
-	PASSINGFLOORTIME int =3
+	DOOROPENTIME 	 time.Duration = 3
+	PASSINGFLOORTIME time.Duration =3
 )
 
 type State int
@@ -43,6 +47,15 @@ type Order struct {
 	TimedOut      bool // Time? or Id?
 }
 
+
+type Elevator struct {
+	UpQueue      [NumFloors]int
+	DownQueue    [NumFloors]int
+	CurrentFloor int
+	Direction    int
+	Motorstop    bool
+}
+
 type FsmChannels struct {
 	FloorReached   chan int
 	NewOrder       chan Order
@@ -52,16 +65,6 @@ type FsmChannels struct {
 
 	DoorTimedOut   chan bool
 	MotorTimedOut  chan int
-	StopMotorTimer chan true
-
-	StopMotorTimer
-
+	StopMotorTimer chan bool
 }
 
-type Elevator struct {
-	UpQueue      [NumFloors]int
-	DownQueue    [NumFloors]int
-	CurrentFloor int
-	Direction    int
-	Motorstop    bool
-}
