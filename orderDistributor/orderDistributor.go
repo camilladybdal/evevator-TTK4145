@@ -5,6 +5,7 @@ import (
 	"time"
 	"fmt"
 	."../types"
+	"../elevio"
 	//"../costfnc"
 
 )
@@ -25,8 +26,31 @@ func orderBuffer(order Order, orderIn chan<- Order) {
 	orderIn <- order
 }
 
+func pollOrders(orderIn chan Order) {
+	newButtonEvent := make(chan elevio.ButtonEvent)
+	elevio.PollButtons(newButtonEvent)
 
-// orderIn kan få ordre fra både nettverket og elevio
+	for {
+		select {
+		case buttonEvent := <- newButtonEvent:
+			var newOrder Order
+			newOrder.Floor = buttonEvent.Floor
+			buttonType := buttonEvent.Button
+			newOrder.DirectionUp = (buttonType == elevio.BT_HallUp)
+			newOrder.DirectionDown = (buttonType == elevio.BT_HallDown)
+			newOrder.CabOrder = (buttonType == elevio.BT_Cab)
+			
+			for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
+				newOrder.Cost[elevatorNumber] = MaxCost
+			}
+
+			newOrder.Status = 1
+			newOrder.TimedOut = false
+			go orderBuffer(newOrder, orderIn)
+		}
+	}
+}
+
 func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorState <-chan Elevator) {
 	var queue [NumberOfFloors]Order
 	//var elevatorState Elevator
@@ -77,7 +101,6 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					order.TimedOut = false
 					fmt.Println("!!")
 					go orderBuffer(order, orderIn)
-					//go orderTimer(order, orderIn, 0)
 				}
 				break
 

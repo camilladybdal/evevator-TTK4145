@@ -50,7 +50,7 @@ func odTest() {
 
 		case recv := <- orderFrom:
 			fmt.Println("revcccc!")
-			fmt.Println(recv.Status)
+			fmt.Println(recv.Floor)
 
 			time.Sleep(2*time.Second)
 			recv.Status = Done
