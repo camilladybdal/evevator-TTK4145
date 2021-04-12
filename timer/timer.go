@@ -5,14 +5,14 @@ import (
 	"time"
 )
 
-func Timer(interval time.Duration, id int, stopTimer <-chan bool, timedOut chan<- int) {
+func StoppableTimer(interval time.Duration, id int, stopTimer <-chan bool, timedOut chan<- int) {
 
 	timer := time.NewTimer(interval * time.Second) //will send the time on the channel after each tick
 
 	for {
 		select {
 		case <-stopTimer:
-			fmt.Println("Finished in time")
+			//fmt.Println("Finished in time")
 
 			//draining channel
 			if !timer.Stop() {
@@ -21,20 +21,18 @@ func Timer(interval time.Duration, id int, stopTimer <-chan bool, timedOut chan<
 			return
 
 		case <-timer.C:
-			fmt.Println("Timed out")
+			//fmt.Println("Timed out")
 			timedOut <- id
 		}
 	}
 }
 
-func DoorTimer(interval time.Duration, timedOut chan<- bool) {
+func CountDownTimer(interval time.Duration, timedOut chan<- bool) {
 	timer := time.NewTimer(interval * time.Second)
 
 	for {
 		<-timer.C
 		timedOut <- true
 		return
-
 	}
-
 }

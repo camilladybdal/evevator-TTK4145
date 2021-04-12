@@ -1,8 +1,9 @@
 package types
 
 const (
-	NumFloors    int = 4
-	DOOROPENTIME int = 3
+	NumFloors   	 int = 4
+	DOOROPENTIME 	 int = 3
+	PASSINGFLOORTIME int =3
 )
 
 type State int
@@ -11,7 +12,7 @@ const (
 	IDLE     State = 0
 	MOVING         = 1
 	DOOROPEN       = 2
-	ERROR          = 3
+	MOTORSTOP      = 3
 )
 
 type Direction int
@@ -36,19 +37,25 @@ type Order struct {
 	Floor         int
 	DirectionUp   bool
 	DirectionDown bool
+	CabOrder      bool
 	Cost          [NumberOfElevators]int
 	Status        int  // 0: No active order , 1: waiting for cost, 2: unconfirmed, 3: confirmed, 4: mine, 5: done
 	TimedOut      bool // Time? or Id?
-	id            int
 }
 
 type FsmChannels struct {
 	FloorReached   chan int
-	MotorDirection chan int
 	NewOrder       chan Order
 	Obstruction    chan bool
-	Stop           chan bool
+
 	ElevatorState  chan Elevator
+
+	DoorTimedOut   chan bool
+	MotorTimedOut  chan int
+	StopMotorTimer chan true
+
+	StopMotorTimer
+
 }
 
 type Elevator struct {
@@ -56,4 +63,5 @@ type Elevator struct {
 	DownQueue    [NumFloors]int
 	CurrentFloor int
 	Direction    int
+	Motorstop    bool
 }

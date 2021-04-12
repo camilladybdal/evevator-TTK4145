@@ -2,11 +2,12 @@ package main
 
 import (
 	//"./elevio"
-	//"./fsm"
+	"./fsm"
 	"./timer"
 )
 
 func main() {
+	fsm.InitFSM(4)
 
 	TimedOut := make(chan bool)
 	go timer.DoorTimer(3, TimedOut)
