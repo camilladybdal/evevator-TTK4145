@@ -2,19 +2,19 @@ package orderDistributor
 
 // imports
 import (
-	"time"
 	"fmt"
-	."../types"
-	"../elevio"
-	//"../costfnc"
+	"time"
 
+	"../elevio"
+	. "../types"
+	//"../costfnc"
 )
 
 func orderTimer(order Order, timedOut chan<- Order, duration int) {
 
 	// Quick fix! NEED TO CHANGE
 	for duration > 0 {
-		fmt.Println(duration-1)
+		fmt.Println(duration - 1)
 		time.Sleep(time.Second)
 		duration--
 	}
@@ -32,14 +32,14 @@ func pollOrders(orderIn chan Order) {
 
 	for {
 		select {
-		case buttonEvent := <- newButtonEvent:
+		case buttonEvent := <-newButtonEvent:
 			var newOrder Order
 			newOrder.Floor = buttonEvent.Floor
 			buttonType := buttonEvent.Button
 			newOrder.DirectionUp = (buttonType == elevio.BT_HallUp)
 			newOrder.DirectionDown = (buttonType == elevio.BT_HallDown)
 			newOrder.CabOrder = (buttonType == elevio.BT_Cab)
-			
+
 			for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
 				newOrder.Cost[elevatorNumber] = MaxCost
 			}
@@ -53,7 +53,7 @@ func pollOrders(orderIn chan Order) {
 
 func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorState <-chan Elevator) {
 	var queue [NumberOfFloors]Order
-	go PollOrders(orderIn)
+	go pollOrders(orderIn)
 	//var elevatorState Elevator
 
 	for floor := 0; floor < NumberOfFloors; floor++ {
@@ -61,7 +61,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 	}
 	for {
 		select {
-			// Order pipeline
+		// Order pipeline
 		case order := <-orderIn:
 			switch order.Status {
 			case NoActiveOrder:
@@ -78,7 +78,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					order.TimedOut = false
 					// TODO: Share order on network
 					queue[order.Floor] = order
-					
+
 					go orderTimer(order, orderIn, 2)
 					fmt.Println("Starting timer in WFC")
 				}
@@ -144,7 +144,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 				order.TimedOut = false
 				queue[order.Floor] = order
-				go orderTimer(order, orderIn, (10+ElevatorId)) // Må endres til et uttrykk med costen
+				go orderTimer(order, orderIn, (10 + ElevatorId)) // Må endres til et uttrykk med costen
 				break
 
 			case Mine:
@@ -181,11 +181,11 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 			break
 		default:
 
-		// Getting the latest elevatorState
-		/*
-		case elevatorState = <- getElevatorState:
-			break
-		*/
+			// Getting the latest elevatorState
+			/*
+				case elevatorState = <- getElevatorState:
+					break
+			*/
 		}
 	}
 }

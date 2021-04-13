@@ -4,10 +4,8 @@ import (
 	"./elevio"
 	//"./fsm"
 	//"./timer"
-	"./orderDistributor"
-	."./types"
-	"fmt"
-	"time"
+	. "./orderDistributor"
+	. "./types"
 )
 
 func main() {
@@ -16,13 +14,11 @@ func main() {
 	orderIn := make(chan Order)
 	getElevatorState := make(chan Elevator)
 
-	elevio.Init("localhost:15657",4)
+	elevio.Init("localhost:15657", 4)
 
 	go OrderDistributor(orderOut, orderIn, getElevatorState)
 
-
-
-	for{
+	for {
 	}
 
 }
