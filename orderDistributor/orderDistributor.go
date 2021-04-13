@@ -14,7 +14,7 @@ func orderTimer(order Order, timedOut chan<- Order, duration int) {
 
 	// Quick fix! NEED TO CHANGE
 	for duration > 0 {
-		fmt.Println(duration - 1)
+		//fmt.Println(duration - 1)
 		time.Sleep(time.Second)
 		duration--
 	}
@@ -23,16 +23,20 @@ func orderTimer(order Order, timedOut chan<- Order, duration int) {
 }
 
 func orderBuffer(order Order, orderIn chan<- Order) {
+	fmt.Println("Order in buffer")
 	orderIn <- order
+	fmt.Println("Order sent to PL")
 }
 
 func pollOrders(orderIn chan Order) {
+	fmt.Println("Polling orders...")
 	newButtonEvent := make(chan elevio.ButtonEvent)
-	elevio.PollButtons(newButtonEvent)
+	go elevio.PollButtons(newButtonEvent)
 
 	for {
 		select {
 		case buttonEvent := <-newButtonEvent:
+			fmt.Println("newButtonEvent")
 			var newOrder Order
 			newOrder.Floor = buttonEvent.Floor
 			buttonType := buttonEvent.Button
@@ -52,6 +56,7 @@ func pollOrders(orderIn chan Order) {
 }
 
 func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorState <-chan Elevator) {
+	fmt.Println("Starting OD...")
 	var queue [NumberOfFloors]Order
 	go pollOrders(orderIn)
 	//var elevatorState Elevator
@@ -63,6 +68,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 		select {
 		// Order pipeline
 		case order := <-orderIn:
+			fmt.Println("Reading order...")
 			switch order.Status {
 			case NoActiveOrder:
 			case WaitingForCost:
@@ -80,7 +86,6 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					queue[order.Floor] = order
 
 					go orderTimer(order, orderIn, 2)
-					fmt.Println("Starting timer in WFC")
 				}
 
 				// Not sure if this is the best solution
@@ -94,7 +99,6 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					order.Status = Unconfirmed
 					queue[order.Floor] = order
 					order.TimedOut = false
-					fmt.Println("!!")
 					go orderBuffer(order, orderIn)
 				}
 				break
@@ -160,7 +164,6 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					// TODO share on network
 					break
 				}
-				orderOut <- order
 
 				go orderTimer(order, orderIn, 5) // Må også endres
 				break
