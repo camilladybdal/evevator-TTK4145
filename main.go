@@ -3,16 +3,15 @@ package main
 import (
 	"fmt"
 
-	"../config"
-	"./elevio"
+	"./config"
 
 	//"./fsm"
 	//"./timer"
 	"time"
 
 	"./network/bcast"
-	. "./orderDistributor"
-	. "./types"
+	//. "./orderDistributor"
+	//. "./types"
 )
 
 type HelloMsg struct {
@@ -22,14 +21,14 @@ type HelloMsg struct {
 
 func main() {
 	/*
-	orderOut := make(chan Order)
-	orderIn := make(chan Order)
-	getElevatorState := make(chan Elevator)
+		orderOut := make(chan Order)
+		orderIn := make(chan Order)
+		getElevatorState := make(chan Elevator)
 
-	elevio.Init("localhost:15657", 4)
+		elevio.Init("localhost:15657", 4)
 
-	go OrderDistributor(orderOut, orderIn, getElevatorState)
-*/
+		go OrderDistributor(orderOut, orderIn, getElevatorState)
+	*/
 	//networkTransmit := make(chan Order)
 	//networkReceive := make(chan Order)
 
