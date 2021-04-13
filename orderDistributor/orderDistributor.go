@@ -22,7 +22,7 @@ func orderToNetwork(orderToNetwork <-chan Order) {
 		select {
 		case order := <-orderToNetwork:
 			fmt.Println("Order sent to network")
-			redundancy := 5
+			redundancy := 1
 			for redundancy > 0 {
 				networkTransmit <- order
 				time.Sleep(10 * time.Millisecond)
