@@ -53,6 +53,7 @@ func pollOrders(orderIn chan Order) {
 
 func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorState <-chan Elevator) {
 	var queue [NumberOfFloors]Order
+	go PollOrders(orderIn)
 	//var elevatorState Elevator
 
 	for floor := 0; floor < NumberOfFloors; floor++ {
@@ -64,18 +65,12 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 		case order := <-orderIn:
 			switch order.Status {
 			case NoActiveOrder:
-				// Kanskje noe?
-				// Log some sort of error?
-				break
-
 			case WaitingForCost:
 				fmt.Println("Status is Waiting for cost")
 				if queue[order.Floor].Status > WaitingForCost {
 					fmt.Println("Already higher status than Waiting for cost")
 					break
 				}
-				// If own cost not attached, Calculate, add and share (start timer?)
-				// else: update queue with new costs
 				if order.Cost[ElevatorId] == MaxCost {
 					// TODO: Ask for elevator state and calculate cost using cost function
 					cost := 5
@@ -171,7 +166,6 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				break
 
 			case Done:
-				// Clear order in queue
 				fmt.Println("Status is Done")
 				order.Status = NoActiveOrder
 				order.DirectionUp = false
