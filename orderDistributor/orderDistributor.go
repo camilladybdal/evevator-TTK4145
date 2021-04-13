@@ -7,8 +7,38 @@ import (
 
 	"../elevio"
 	. "../types"
+	"../network/bcast"
+	"../config"
 	//"../costfnc"
 )
+
+func orderToNetwork(orderToNetwork <-chan Order) {
+	port := config.Port
+	networkTransmit := make(chan Order)
+
+	go bcast.Transmitter(port, networkTransmit)
+
+	for {
+		select {
+		case order := <- orderToNetwork:
+			networkTransmit <- order
+		}
+	}
+}
+
+func orderFromNetwork(orderFromNetwork chan<- Order) {
+	port := config.Port
+	networkRecieve := make(chan Order)
+
+	go bcast.Receiver(port, networkRecieve)
+
+	for {
+		select {
+		case orderFromNetwork <- <- networkRecieve:
+
+		}
+	}
+}
 
 func orderTimer(order Order, timedOut chan<- Order, duration int) {
 
@@ -59,6 +89,10 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 	fmt.Println("Starting OD...")
 	var queue [NumberOfFloors]Order
 	go pollOrders(orderIn)
+	orderToNetworkChannel := make(chan Order)
+	go orderToNetwork(orderToNetworkChannel)
+	go orderFromNetwork(orderIn)
+
 	//var elevatorState Elevator
 
 	for floor := 0; floor < NumberOfFloors; floor++ {
@@ -82,7 +116,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					cost := 5
 					order.Cost[ElevatorId] = cost
 					order.TimedOut = false
-					// TODO: Share order on network
+					orderToNetworkChannel <- order
 					queue[order.Floor] = order
 
 					go orderTimer(order, orderIn, 2)

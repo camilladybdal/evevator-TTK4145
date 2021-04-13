@@ -20,6 +20,7 @@ func main() {
 
 	for {
 	}
+	/*
 	elevator.UpQueue[0] = 1
 	//elevator.UpQueue[2] = 1
 	for i := 0; i < NumFloors; i++ {
@@ -28,4 +29,10 @@ func main() {
 	elevator.DownQueue[3] = 1
 	cost := costfnc.Costfunction(elevator, neworder)
 	println(cost)
+	*/
 }
+
+
+// lage en cannel som sender order, og en som tar i mot
+// putt dem i bcast transmit og recieve
+// 
