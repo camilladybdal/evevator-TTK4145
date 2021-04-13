@@ -1,20 +1,24 @@
 package main
 
 import (
-	"./costfnc"
+	"./elevio"
+	//"./fsm"
+	//"./timer"
+	. "./orderDistributor"
 	. "./types"
 )
 
 func main() {
-	
-	var neworder Order
-	neworder.Floor = 1
-	neworder.DirectionUp = true
-	var elevator Elevator
-	elevator.CurrentFloor = 2
-	elevator.Direction = 0
-	for i := 0; i < NumFloors; i++ {
-		elevator.UpQueue[i] = 0
+
+	orderOut := make(chan Order)
+	orderIn := make(chan Order)
+	getElevatorState := make(chan Elevator)
+
+	elevio.Init("localhost:15657", 4)
+
+	go OrderDistributor(orderOut, orderIn, getElevatorState)
+
+	for {
 	}
 	elevator.UpQueue[0] = 1
 	//elevator.UpQueue[2] = 1

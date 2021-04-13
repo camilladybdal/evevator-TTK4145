@@ -2,16 +2,19 @@ package orderDistributor
 
 // imports
 import (
+	"fmt"
 	"time"
-	"../types"
-	"../costfnc"
 
+	"../elevio"
+	. "../types"
+	//"../costfnc"
 )
 
-func orderTimer(order types.Order, timedOut chan<- types.Order, duration int) {
+func orderTimer(order Order, timedOut chan<- Order, duration int) {
 
 	// Quick fix! NEED TO CHANGE
 	for duration > 0 {
+		fmt.Println(duration - 1)
 		time.Sleep(time.Second)
 		duration--
 	}
@@ -19,126 +22,170 @@ func orderTimer(order types.Order, timedOut chan<- types.Order, duration int) {
 	timedOut <- order
 }
 
-// orderIn kan få ordre fra både nettverket og elevio
-func OrderDistributor(orderOut chan<- types.Order, orderIn <-chan types.Order, getElevatorState <-chan types.Elevator) {
-	var queue [types.NumberOfFloors]types.Order
-	var elevatorState types.Elevator
+func orderBuffer(order Order, orderIn chan<- Order) {
+	orderIn <- order
+}
 
-	for floor := 0; floor < types.NumberOfFloors; floor++ {
-		queue[floor].Floor = floor
-	}
+func pollOrders(orderIn chan Order) {
+	newButtonEvent := make(chan elevio.ButtonEvent)
+	elevio.PollButtons(newButtonEvent)
 
 	for {
 		select {
-			// Order pipeline
+		case buttonEvent := <-newButtonEvent:
+			var newOrder Order
+			newOrder.Floor = buttonEvent.Floor
+			buttonType := buttonEvent.Button
+			newOrder.DirectionUp = (buttonType == elevio.BT_HallUp)
+			newOrder.DirectionDown = (buttonType == elevio.BT_HallDown)
+			newOrder.CabOrder = (buttonType == elevio.BT_Cab)
+
+			for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
+				newOrder.Cost[elevatorNumber] = MaxCost
+			}
+
+			newOrder.Status = 1
+			newOrder.TimedOut = false
+			go orderBuffer(newOrder, orderIn)
+		}
+	}
+}
+
+func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorState <-chan Elevator) {
+	var queue [NumberOfFloors]Order
+	go pollOrders(orderIn)
+	//var elevatorState Elevator
+
+	for floor := 0; floor < NumberOfFloors; floor++ {
+		queue[floor].Floor = floor
+	}
+	for {
+		select {
+		// Order pipeline
 		case order := <-orderIn:
 			switch order.Status {
-			case types.NoActiveOrder:
-				// Kanskje noe?
-				// Log some sort of error?
-				break
-
-			case types.WaitingForCost:
-				if queue[order.Floor].Status > types.WaitingForCost {
+			case NoActiveOrder:
+			case WaitingForCost:
+				fmt.Println("Status is Waiting for cost")
+				if queue[order.Floor].Status > WaitingForCost {
+					fmt.Println("Already higher status than Waiting for cost")
 					break
 				}
-				// If own cost not attached, Calculate, add and share (start timer?)
-				// else: update queue with new costs
-				if order.Cost[types.ElevatorId] == types.MaxCost {
+				if order.Cost[ElevatorId] == MaxCost {
 					// TODO: Ask for elevator state and calculate cost using cost function
-					cost := costfnc.Costfunction(elevatorState, order)
-					order.Cost[types.ElevatorId] = cost
+					cost := 5
+					order.Cost[ElevatorId] = cost
 					order.TimedOut = false
 					// TODO: Share order on network
 					queue[order.Floor] = order
-					go orderTimer(order, orderIn, 3)
+
+					go orderTimer(order, orderIn, 2)
+					fmt.Println("Starting timer in WFC")
 				}
 
 				// Not sure if this is the best solution
 				allCostsPresent := true
-				for elevatorNumber := 0; elevatorNumber < types.NumberOfElevators; elevatorNumber++ {
-					if order.Cost[elevatorNumber] == types.MaxCost {
+				for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
+					if order.Cost[elevatorNumber] == MaxCost {
 						allCostsPresent = false
 					}
 				}
 				if allCostsPresent || order.TimedOut {
-					order.Status = types.Unconfirmed
+					order.Status = Unconfirmed
 					queue[order.Floor] = order
-					orderIn <- order
+					order.TimedOut = false
+					fmt.Println("!!")
+					go orderBuffer(order, orderIn)
 				}
 				break
 
-			case types.Unconfirmed:
-				if queue[order.Floor].Status > types.Unconfirmed {
+			case Unconfirmed:
+				fmt.Println("Status is Unconfirmed")
+				if queue[order.Floor].Status > Unconfirmed {
+					fmt.Println("Already higher status than Unconfirmed")
 					break
+				}
+				if order.TimedOut == true {
+					order.Status = Mine
+					queue[order.Floor] = order
+					order.TimedOut = false
+					go orderBuffer(order, orderIn)
 				}
 
 				hasLowestCost := true
-				for elevatorNumber := 0; elevatorNumber < types.NumberOfElevators; elevatorNumber++ {
-					if order.Cost[elevatorNumber]*10+elevatorNumber < order.Cost[types.ElevatorId]*10+types.ElevatorId {
+				for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
+					if order.Cost[elevatorNumber]*10+elevatorNumber < order.Cost[ElevatorId]*10+ElevatorId {
 						hasLowestCost = false
 					}
 				}
 				if hasLowestCost {
-					order.Status = types.Uonfirmed
+					order.Status = Confirmed
 					// TODO share on network
-					order.Status = types.Mine
+					order.Status = Mine
 					queue[order.Floor] = order
-					orderIn <- order
+					go orderBuffer(order, orderIn)
 				} else {
-					go orderTimer(order, orderIn, 3)
+					go orderTimer(order, orderIn, 1)
 				}
 				break
 
-			case types.Unconfirmed:
-				if queue[order.Floor].Status > types.Confirmed {
+			case Confirmed:
+				fmt.Println("Status is Confirmed")
+				if queue[order.Floor].Status > Confirmed {
+					fmt.Println("Already higher status than Confirmed")
 					break
 				}
 				if order.TimedOut == true {
-					order.Status = types.Mine
-					orderIn <- order
+					order.Status = Mine
+					order.TimedOut = false
+					go orderBuffer(order, orderIn)
 					break
 				}
 
 				order.TimedOut = false
 				queue[order.Floor] = order
-				go orderTimer(order, orderIn, 10) // Må endres til et uttrykk med costen
+				go orderTimer(order, orderIn, (10 + ElevatorId)) // Må endres til et uttrykk med costen
 				break
 
-			case types.Mine:
-				if queue[order.Floor].Status > types.Mine {
+			case Mine:
+				fmt.Println("Status is Mine")
+				if queue[order.Floor].Status > Mine || (queue[order.Floor].Status < Mine && order.TimedOut == true) {
+					fmt.Println("Order with status Mine cancelled")
 					break
 				}
 				if order.TimedOut == true {
-					order.Cost[types.ElevatorId] = types.MaxCost
-					order.Status = types.Unconfirmed
+					fmt.Println("Order with status Mine has Timed out")
+					order.Cost[ElevatorId] = MaxCost
+					order.Status = Unconfirmed
 					// TODO share on network
 					break
 				}
 				orderOut <- order
 
-				go orderTimer(order, orderIn, 10) // Må også endres
+				go orderTimer(order, orderIn, 5) // Må også endres
 				break
 
-			case types.Done:
-				// Clear order in queue
-				order.Status = types.NoActiveOrder
+			case Done:
+				fmt.Println("Status is Done")
+				order.Status = NoActiveOrder
 				order.DirectionUp = false
 				order.DirectionDown = false
 				order.TimedOut = false
-				for elevatorNumber := 0; elevatorNumber < types.NumberOfElevators; elevatorNumber++ {
-					order.Cost[elevatorNumber] = types.MaxCost
+				for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
+					order.Cost[elevatorNumber] = MaxCost
 				}
 				queue[order.Floor] = order
 				// TODO Share on network
 				break
 			}
 			break
+		default:
 
-		// Getting the latest elevatorState
-		case elevatorState = <- getElevatorState:
-			break
-
+			// Getting the latest elevatorState
+			/*
+				case elevatorState = <- getElevatorState:
+					break
+			*/
 		}
 	}
 }
