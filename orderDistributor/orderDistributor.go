@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"../elevio"
-	. "../types"
-	"../network/bcast"
 	"../config"
+	"../elevio"
+	"../network/bcast"
+	. "../types"
 	//"../costfnc"
 )
 
@@ -20,16 +20,15 @@ func orderToNetwork(orderToNetwork <-chan Order) {
 
 	for {
 		select {
-		case order := <- orderToNetwork:
+		case order := <-orderToNetwork:
 			fmt.Println("Order sent to network")
 			redundancy := 5
-			order.Status = Unconfirmed
 			for redundancy > 0 {
 				networkTransmit <- order
-				time.Sleep(10*time.Millisecond)
+				time.Sleep(10 * time.Millisecond)
 				redundancy--
 			}
-			
+
 		}
 	}
 }
@@ -42,7 +41,9 @@ func orderFromNetwork(orderFromNetwork chan<- Order) {
 
 	for {
 		select {
-		case orderFromNetwork <- <- networkRecieve:
+		case order := <-networkRecieve:
+			fmt.Println("Order recv from network")
+			orderFromNetwork <- order
 
 		}
 	}
