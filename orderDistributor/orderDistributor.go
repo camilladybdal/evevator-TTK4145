@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"../config"
+	. "../config"
 	"../elevio"
 	"../network/bcast"
 	. "../types"
@@ -13,7 +13,7 @@ import (
 )
 
 func orderToNetwork(orderToNetwork <-chan Order) {
-	port := config.Port
+	port := Port
 	networkTransmit := make(chan Order)
 
 	go bcast.Transmitter(port, networkTransmit)
@@ -34,7 +34,7 @@ func orderToNetwork(orderToNetwork <-chan Order) {
 }
 
 func orderFromNetwork(orderFromNetwork chan<- Order) {
-	port := config.Port
+	port := Port
 	networkRecieve := make(chan Order)
 
 	go bcast.Receiver(port, networkRecieve)
@@ -122,7 +122,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 				if order.Cost[ElevatorId] == MaxCost {
 					// TODO: Ask for elevator state and calculate cost using cost function
-					cost := 5
+					cost := 4
 					order.Cost[ElevatorId] = cost
 					order.TimedOut = false
 					orderToNetworkChannel <- order
@@ -138,6 +138,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 						allCostsPresent = false
 					}
 				}
+				// Hvis timeout, må sende ordre fra queue
 				if allCostsPresent || order.TimedOut {
 					order.Status = Unconfirmed
 					queue[order.Floor] = order
