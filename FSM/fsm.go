@@ -214,7 +214,6 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					}
 
 					wasobstr = true //nå er denne forever true frem til hele driten omgangen er ferdig
-
 				}
 
 				
@@ -223,14 +222,27 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					fmt.Println("OBSTRUCTION OFF")
 
 					fmt.Println("Stopping immobility timer here 1 ")
-					channels.StopImmobileTimer <- true
 					elevio.SetDoorOpenLamp(false) 
+					channels.StopImmobileTimer <- true
 					}
 				
 
-				if checkOrdersPresent(elevatorInfo) == true{
+				if checkOrdersPresent(elevatorInfo) == true && obstructed == false{
 					elevio.SetDoorOpenLamp(false)
-					nextFloor := queueSearch(QueueDirection, elevatorInfo)
+					nextFloor = queueSearch(QueueDirection, elevatorInfo)
+
+
+					for i:=0;i<NumFloors;i++{
+						fmt.Println(elevatorInfo.UpQueue[i])
+					}
+					for i:=0;i<NumFloors;i++{
+					fmt.Println(elevatorInfo.DownQueue[i])
+					}
+
+
+
+					fmt.Println("Nå skal jeg videre til :", nextFloor)
+
 					dir := getDirection(elevatorInfo.CurrentFloor, nextFloor)
 					elevio.SetMotorDirection(dir)
 					QueueDirection = dir
@@ -240,6 +252,8 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					go StoppableTimer(PASSINGFLOORTIME, 1, channels.StopImmobileTimer, channels.Immobile)
 					fmt.Println("Started motortimer")
 					State = MOVING
+
+
 				} else {
 					if (obstructed == false && checkOrdersPresent(elevatorInfo) == false){
 						elevio.SetDoorOpenLamp(false)
@@ -256,7 +270,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				fmt.Println("entered here")
 
 				if obstructed == false {
-					State = IDLE
+					State = DOOROPEN
 					elevatorInfo.Immobile = false
 					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut)
 					fmt.Println("Restarted doortimer")
@@ -291,6 +305,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 			//tømme min egen kø, jon sender den til andre heiser
 			emptyQueue(&elevatorInfo)
+
 
 			//update elevInfo
 			//ElevState <- elevatorInfo

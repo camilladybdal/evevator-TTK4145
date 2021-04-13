@@ -83,7 +83,7 @@ func removeFromQueue(elevator *Elevator){
 
 func emptyQueue(elevator *Elevator){
 	for floor := 0; floor < NumFloors; floor++ {
-		elevator.UpQueue[elevator.CurrentFloor] = 0
-		elevator.DownQueue[elevator.CurrentFloor] = 0
+		elevator.UpQueue[floor] = 0
+		elevator.DownQueue[floor] = 0
 	}
 }

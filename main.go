@@ -36,12 +36,31 @@ func main() {
 
 	//lage test-ordre
 	var order1 Order
-	order1.Floor = 2
+	order1.Floor = 3
 	order1.DirectionDown = true
 	order1.CabOrder = false
 
+	var order2 Order
+	order2.Floor = 2
+	order2.DirectionUp = true
+	order2.CabOrder = false
+
+	var order3 Order
+	order3.Floor = 0
+	order3.DirectionUp = true
+	order3.CabOrder = false
+
+
 	fmt.Println("sending")
 	channels.NewOrder <- order1
+	fmt.Println("sent")
+
+	fmt.Println("sending")
+	channels.NewOrder <- order2
+	fmt.Println("sent")
+
+	fmt.Println("sending")
+	channels.NewOrder <- order3
 	fmt.Println("sent")
 
 	select{}
