@@ -8,8 +8,8 @@ import (
 const (
 	NumFloors   	 	int = 4
 	DOOROPENTIME 	 	time.Duration = 3
-	PASSINGFLOORTIME 	time.Duration = 3
-	MAXOBSTRUCTIONTIME  time.Duration = 10 //?
+	PASSINGFLOORTIME 	time.Duration = 4
+	MAXOBSTRUCTIONTIME  time.Duration = 9 //?
 )
 
 type State int

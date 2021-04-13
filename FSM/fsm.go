@@ -5,7 +5,9 @@ import (
 	"fmt"
 	. "../types"
 	. "../timer"
+	//"time"
 )
+
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Global functions
@@ -20,14 +22,20 @@ func InitFSM(numFloors int) {
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	elevio.SetFloorIndicator(0)
 
+	elevio.SetDoorOpenLamp(false)
+
 	fmt.Println("FSM Initialized")
 }
 
-func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<- Elevator) {
+func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<- Elevator) {
 	State := IDLE
 	var elevatorInfo Elevator
+	emptyQueue(&elevatorInfo)
+
 	elevatorInfo.CurrentFloor = 0
-	var QueueDirection elevio.MotorDirection
+	wasobstr := false
+	
+	var QueueDirection elevio.MotorDirection 
 	QueueDirection = elevio.MD_Stop
 
 	var nextFloor int
@@ -35,7 +43,7 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 	go elevio.PollFloorSensor(channels.FloorReached)
 	go elevio.PollObstructionSwitch(channels.Obstruction)
-
+	fmt.Println("Polling started...")
 
 	//for select switch case
 	for{
@@ -64,22 +72,26 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 						elevatorInfo.DownQueue[newOrder.Floor] = 1
 					}
 
+					//det er her det går galt
 					nextFloor = queueSearch(QueueDirection, elevatorInfo)
+					fmt.Println("floor im heading for is: ", nextFloor)
 
 					
 					dir := getDirection(elevatorInfo.CurrentFloor, nextFloor)
 					elevio.SetMotorDirection(dir)
+					
 					QueueDirection = dir
 					elevatorInfo.Direction = dir	
+					fmt.Println("direction to floor is: " , dir)
 
 					
-					//Start IMMOBILETimer 
+					//Start for motor!!
 					go StoppableTimer(PASSINGFLOORTIME, 1, channels.StopImmobileTimer, channels.Immobile)
 					fmt.Println("Started motortimer")
 					State = MOVING
 
 					//update elev-info
-					ElevState <- elevatorInfo
+					//ElevState <- elevatorInfo
 				}
 			case MOVING:
 					//legger til i køen
@@ -94,7 +106,7 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				nextFloor = queueSearch(QueueDirection, elevatorInfo)
 
 				//update elev-info
-				ElevState <- elevatorInfo	
+				//ElevState <- elevatorInfo	
 					
 			case DOOROPEN:
 				if elevatorInfo.CurrentFloor == newOrder.Floor{
@@ -102,11 +114,11 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					elevio.SetDoorOpenLamp(true)
 					CountDownTimer(DOOROPENTIME, channels.DoorTimedOut) 
 					fmt.Println("Started Doortimer")
-					removeFromQueue(elevatorInfo)
+					removeFromQueue(&elevatorInfo)
 
 					//send a completed order message to OrderDistributed
 					newOrder.Status = 5 //replace with Done
-					OrderUpdate <- newOrder
+					//OrderUpdate <- newOrder
 
 				} else {
 					//legger til i køen
@@ -117,7 +129,7 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 						elevatorInfo.DownQueue[newOrder.Floor] = 1
 					}
 					//update elev-info
-					ElevState <- elevatorInfo					
+					//ElevState <- elevatorInfo					
 				}
 			case IMMOBILE:
 			}
@@ -130,28 +142,29 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 			elevatorInfo.CurrentFloor = floorArrival
 			elevio.SetFloorIndicator(floorArrival)
 
-			elevatorInfo.CurrentFloor = floorArrival
-
 			switch State{
 			case IDLE:
 			case MOVING:
 				if nextFloor == floorArrival{
+
 					elevio.SetMotorDirection(elevio.MD_Stop)
 					elevatorInfo.Direction = elevio.MD_Stop
 
+
 					//Stop motorTimer
 				    channels.StopImmobileTimer <- true
-					fmt.Println("Started Motortimer")
+					fmt.Println("Stopped Motortimer")
+					fmt.Println("Floor im heading for is :" ,nextFloor)
 
 					//open door
-					elevio.SetDoorOpenLamp(true)
-					removeFromQueue(elevatorInfo)
+					elevio.SetDoorOpenLamp(true)					
+					removeFromQueue(&elevatorInfo)
 					
 					//send a completed order message to OrderDistributed
 					var Expidized_order Order
 					Expidized_order.Floor = floorArrival
 					Expidized_order.Status = 5 //replace with Done
-					OrderUpdate <- Expidized_order
+					//OrderUpdate <- Expidized_order
 
 					//starte door-timer
 					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut)
@@ -159,7 +172,7 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					State = DOOROPEN
 
 					//update elev-info
-					ElevState <- elevatorInfo
+					//ElevState <- elevatorInfo
 				} else {
 					//Restart motorTimer
 					channels.StopImmobileTimer <- true
@@ -173,33 +186,50 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				
 				//si at jeg ikke har IMMOBILEp lenger til Jon, da sender jon mine cabbies
 				elevatorInfo.Immobile = false
-				ElevState <- elevatorInfo
+				//ElevState <- elevatorInfo
 			}
 
 		
 		case <- channels.DoorTimedOut:
 			fmt.Println("Door has timedout")
+			fmt.Println("my state is : ", State)
+			
+			
 			switch State{
 			case IDLE:
 			case MOVING:
 			case DOOROPEN:
+				
 
 				if obstructed == true{
+					fmt.Println("OBSTRUCTION")
+
 					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut)
-					fmt.Println("Started doortimer")
+					fmt.Println("Restarted doortimer")
 
-					//starte obstruction timer 
+					if wasobstr == false {
+					//starte obstruction timer  første gangen den er obsruert
+					fmt.Println("started obstruction timer")
 					go StoppableTimer(MAXOBSTRUCTIONTIME, 1, channels.StopImmobileTimer, channels.Immobile)
-					break
+					}
 
-				} else {
-					//stop obstruction timer
-					channels.StopImmobileTimer <- true
-					elevio.SetDoorOpenLamp(false) //?
+					wasobstr = true //nå er denne forever true frem til hele driten omgangen er ferdig
+
 				}
 
+				
+				//stop obstruction timer
+				if obstructed == false && wasobstr == true{
+					fmt.Println("OBSTRUCTION OFF")
+
+					fmt.Println("Stopping immobility timer here 1 ")
+					channels.StopImmobileTimer <- true
+					elevio.SetDoorOpenLamp(false) 
+					}
+				
 
 				if checkOrdersPresent(elevatorInfo) == true{
+					elevio.SetDoorOpenLamp(false)
 					nextFloor := queueSearch(QueueDirection, elevatorInfo)
 					dir := getDirection(elevatorInfo.CurrentFloor, nextFloor)
 					elevio.SetMotorDirection(dir)
@@ -210,123 +240,67 @@ func runElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					go StoppableTimer(PASSINGFLOORTIME, 1, channels.StopImmobileTimer, channels.Immobile)
 					fmt.Println("Started motortimer")
 					State = MOVING
-
-				} else {	
-					State = IDLE
+				} else {
+					if (obstructed == false && checkOrdersPresent(elevatorInfo) == false){
+						elevio.SetDoorOpenLamp(false)
+						State = IDLE
+						fmt.Println("im here, have closed door, state idle")
+					}
 				}
+
 				//update elev-info
-				ElevState <- elevatorInfo
+				//ElevState <- elevatorInfo
 
 			case IMMOBILE:
-				//hvis den er i denne staten pga obstruction, kommer den ut av den hvis døren lukker seg
-				State = IDLE
-				elevatorInfo.Immobile = false
-				ElevState <- elevatorInfo
+				
+				fmt.Println("entered here")
+
+				if obstructed == false {
+					State = IDLE
+					elevatorInfo.Immobile = false
+					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut)
+					fmt.Println("Restarted doortimer")
+
+				}
+				//ElevState <- elevatorInfo 
+				//elevstaten har jo ikke endret seg nå...
 			}
 
 
 		case obstructed = <- channels.Obstruction:
+				fmt.Println("Obstruction is : ", obstructed)
+
+				if obstructed == false {
+					if State == IMMOBILE{
+						State = DOOROPEN
+						//channels.StopImmobileTimer <- true
+						go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut)
+						fmt.Println("Restarted doortimer, no longer obstructed")
+						wasobstr = false
+					}
+				}
 
 		case <- channels.Immobile:
 			fmt.Println( "IMMOBILITY detected")
+
+			//stop immobility timer
+			channels.StopImmobileTimer <- true
 
 			//tell OrderDistributer that I am IMMOBILE 
 			elevatorInfo.Immobile = true
 
 			//tømme min egen kø, jon sender den til andre heiser
-			emptyQueue(elevatorInfo)
+			emptyQueue(&elevatorInfo)
 
 			//update elevInfo
-			ElevState <- elevatorInfo
+			//ElevState <- elevatorInfo
 			State = IMMOBILE
 
+
+		default:
 		}
 	}
 }
 
 
-// ------------------------------------------------------------------------------------------------------------------------------------------------------
-// Local functions
-// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-func getDirection(currentFloor int, destinationFloor int) elevio.MotorDirection {
-	if currentFloor-destinationFloor > 0 {
-		return elevio.MD_Down
-	} else {
-		return elevio.MD_Up
-	}
-}
-
-func checkOrdersPresent(elevator Elevator) bool{
-	foundOrder := false
-	for i := 1; i < NumFloors; i++ {
-		if elevator.UpQueue[i] ==1 || elevator.DownQueue[i] == 1 {
-			foundOrder = true
-		}
-	}
-	return foundOrder
-}
-
-func queueSearch(QueueDirection elevio.MotorDirection, elevator Elevator) int {
-	nextFloor := 0
-
-	//first time
-	if QueueDirection == elevio.MD_Stop{
-		QueueDirection = elevio.MD_Up
-	}
-
-
-	if QueueDirection == elevio.MD_Up {
-		for floor := elevator.CurrentFloor; floor < NumFloors; floor++ {
-			if elevator.UpQueue[floor] == 1 {
-				nextFloor = elevator.UpQueue[floor]
-				break
-			}
-		}
-		for floor := NumFloors - 1; floor >= 0; floor-- {
-			if elevator.DownQueue[floor] == 1 {
-				nextFloor = elevator.DownQueue[floor]
-				break
-			}
-		}
-		for floor := 0; floor < elevator.CurrentFloor; floor++ {
-			if elevator.UpQueue[floor] == 1 {
-				nextFloor = elevator.UpQueue[floor]
-				break
-			}
-		}
-	}
-	if QueueDirection == elevio.MD_Down{
-		for floor := elevator.CurrentFloor; floor >= 0; floor-- {
-			if elevator.DownQueue[floor] == 1 {
-				nextFloor = elevator.DownQueue[floor]
-				break
-			}
-		}
-		for floor := 0; floor < NumFloors; floor++ {
-			if elevator.UpQueue[floor] == 1 {
-				nextFloor = elevator.UpQueue[floor]
-				break
-			}
-		}
-		for floor := elevator.CurrentFloor; floor >= 0; floor-- {
-			if elevator.DownQueue[floor] == 1 {
-				nextFloor = elevator.DownQueue[floor]
-				break
-			}
-		}
-	}
-	return nextFloor
-}
-
-func removeFromQueue(elevator Elevator){
-		elevator.UpQueue[elevator.CurrentFloor] = 0
-		elevator.DownQueue[elevator.CurrentFloor] = 0
-}
-
-func emptyQueue(elevator Elevator){
-	for floor := 0; floor < NumFloors; floor++ {
-		elevator.UpQueue[floor] = 0
-		elevator.DownQueue[floor] = 0
-	}
-}

@@ -1,19 +1,49 @@
 package main
 
 import (
-	//"./elevio"
+	"./elevio"
 	"./fsm"
-	"./timer"
+	//"./timer"
+	. "./types"
+	"fmt"
+	"time"
 )
 
+
+
 func main() {
-	fsm.InitFSM(4)
 
-	TimedOut := make(chan bool)
-	go timer.DoorTimer(3, TimedOut)
+	elevio.Init("localhost:15657", NumFloors)
+	fsm.InitFSM(2)
 
-	if <-TimedOut {
-		println("finished timer")
-	}
+
+	time.Sleep(5*time.Second)
+	
+	var channels FsmChannels
+	channels.NewOrder = make(chan Order)
+	channels.FloorReached = make(chan int)
+	channels.Obstruction = make(chan bool)
+	channels.ElevatorState  = make(chan Elevator)
+	channels.DoorTimedOut = make(chan bool)
+	channels.Immobile = make(chan int)
+	channels.StopImmobileTimer = make(chan bool)
+
+	OrderUpdate := make(chan Order)
+	elevInfo := make(chan Elevator)
+
+	go fsm.RunElevator(channels, OrderUpdate, elevInfo)
+
+
+	//lage test-ordre
+	var order1 Order
+	order1.Floor = 2
+	order1.DirectionDown = true
+	order1.CabOrder = false
+
+	fmt.Println("sending")
+	channels.NewOrder <- order1
+	fmt.Println("sent")
+
+	select{}
 
 }
