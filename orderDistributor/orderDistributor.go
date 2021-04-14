@@ -168,7 +168,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 				if hasLowestCost {
 					order.Status = Confirmed
-					orderToNetwork <- order
+					orderToNetworkChannel <- order
 					order.Status = Mine
 					queue[order.Floor] = order
 					go orderBuffer(order, orderIn)
@@ -205,7 +205,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					fmt.Println("Order with status Mine has Timed out")
 					order.Cost[ElevatorId] = MaxCost
 					order.Status = Unconfirmed
-					orderToNetwork <- order
+					orderToNetworkChannel <- order
 					break
 				}
 
@@ -222,7 +222,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					order.Cost[elevatorNumber] = MaxCost
 				}
 				queue[order.Floor] = order
-				orderToNetwork <- order
+				orderToNetworkChannel <- order
 				break
 			}
 			break
