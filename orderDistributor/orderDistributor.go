@@ -121,8 +121,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					break
 				}
 				if order.Cost[ElevatorId] == MaxCost {
-					// TODO: Ask for elevator state and calculate cost using cost function
-					cost := 4
+					cost := 4 // add costfnc
 					order.Cost[ElevatorId] = cost
 					order.TimedOut = false
 					orderToNetworkChannel <- order
