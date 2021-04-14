@@ -7,6 +7,7 @@ import (
 	"./elevio"
 	. "./orderDistributor"
 	. "./types"
+	"fmt"
 )
 
 type HelloMsg struct {
@@ -16,11 +17,13 @@ type HelloMsg struct {
 
 func main() {
 
+	fmt.Println("Hellooooo")
 	orderOut := make(chan Order)
 	orderIn := make(chan Order)
 	getElevatorState := make(chan Elevator)
 
-	elevio.Init("10.0.0.5:15657", 4)
+	//elevio.Init("localhost:15657", 4)
+	elevio.Init("10.0.0.5:15658", 4)
 
 	go OrderDistributor(orderOut, orderIn, getElevatorState)
 	for {
