@@ -3,8 +3,8 @@ package config
 const (
 	Port = 16569
 
-	NumberOfElevators = 3 // Need better implemantation (config fil?)
-	NumberOfFloors    = 4 // also config?
+	NumberOfElevators = 2
+	NumberOfFloors    = 4
 	MaxCost           = 999999999
-	ElevatorId        = 1
+	ElevatorId        = 0
 )

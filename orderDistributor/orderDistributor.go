@@ -12,6 +12,7 @@ import (
 	//"../costfnc"
 )
 
+// Slå sammen netverksfunksjonene
 func orderToNetwork(orderToNetwork <-chan Order) {
 	port := Port
 	networkTransmit := make(chan Order)
@@ -58,17 +59,16 @@ func orderTimer(order Order, timedOut chan<- Order, duration int) {
 		duration--
 	}
 	order.TimedOut = true
+	fmt.Println("Order timer expired")
 	timedOut <- order
 }
 
 func orderBuffer(order Order, orderIn chan<- Order) {
 	fmt.Println("Order in buffer")
 	orderIn <- order
-	fmt.Println("Order sent to PL")
 }
 
 func pollOrders(orderIn chan Order) {
-	fmt.Println("Polling orders...")
 	newButtonEvent := make(chan elevio.ButtonEvent)
 	go elevio.PollButtons(newButtonEvent)
 
@@ -95,7 +95,7 @@ func pollOrders(orderIn chan Order) {
 }
 
 func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorState <-chan Elevator) {
-	fmt.Println("Starting OD...")
+	fmt.Println("Starting OrderDistributor...")
 	var queue [NumberOfFloors]Order
 	go pollOrders(orderIn)
 	orderToNetworkChannel := make(chan Order)
@@ -168,7 +168,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 				if hasLowestCost {
 					order.Status = Confirmed
-					// TODO share on network
+					orderToNetwork <- order
 					order.Status = Mine
 					queue[order.Floor] = order
 					go orderBuffer(order, orderIn)
@@ -205,7 +205,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					fmt.Println("Order with status Mine has Timed out")
 					order.Cost[ElevatorId] = MaxCost
 					order.Status = Unconfirmed
-					// TODO share on network
+					orderToNetwork <- order
 					break
 				}
 
@@ -222,7 +222,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					order.Cost[elevatorNumber] = MaxCost
 				}
 				queue[order.Floor] = order
-				// TODO Share on network
+				orderToNetwork <- order
 				break
 			}
 			break

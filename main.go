@@ -20,7 +20,7 @@ func main() {
 	orderIn := make(chan Order)
 	getElevatorState := make(chan Elevator)
 
-	elevio.Init("localhost:15657", 4)
+	elevio.Init("10.0.0.5:15657", 4)
 
 	go OrderDistributor(orderOut, orderIn, getElevatorState)
 	for {
