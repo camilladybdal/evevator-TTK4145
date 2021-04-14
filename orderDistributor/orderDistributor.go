@@ -13,11 +13,14 @@ import (
 )
 
 // Slå sammen netverksfunksjonene
-func orderToNetwork(orderToNetwork <-chan Order) {
+
+func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork chan<- Order) {
 	port := Port
 	networkTransmit := make(chan Order)
+	networkRecieve := make(chan Order)
 
 	go bcast.Transmitter(port, networkTransmit)
+	go bcast.Receiver(port, networkRecieve)
 
 	for {
 		select {
@@ -29,23 +32,9 @@ func orderToNetwork(orderToNetwork <-chan Order) {
 				time.Sleep(10 * time.Millisecond)
 				redundancy--
 			}
-
-		}
-	}
-}
-
-func orderFromNetwork(orderFromNetwork chan<- Order) {
-	port := Port
-	networkRecieve := make(chan Order)
-
-	go bcast.Receiver(port, networkRecieve)
-
-	for {
-		select {
 		case order := <-networkRecieve:
 			fmt.Println("Order recv from network")
 			orderFromNetwork <- order
-
 		}
 	}
 }
@@ -99,8 +88,8 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 	var queue [NumberOfFloors]Order
 	go pollOrders(orderIn)
 	orderToNetworkChannel := make(chan Order)
-	go orderToNetwork(orderToNetworkChannel)
-	go orderFromNetwork(orderIn)
+
+	go orderNetworkCommunication(orderToNetworkChannel, orderIn)
 
 	//var elevatorState Elevator
 
