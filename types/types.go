@@ -1,8 +1,10 @@
 package types
 
+
 import (
 	"time"
 	"../elevio"
+   . "../config"
 )
 
 const (
@@ -31,11 +33,16 @@ const (
 */
 
 // Constants
+
+type Status int
+
 const (
-	NumberOfElevators = 3 // Need better implemantation (config fil?)
-	NumberOfFloors    = 4 // also config?
-	maxCost           = 999999999
-	elevatorId        = 0
+	NoActiveOrder  Status = 0
+	WaitingForCost        = 1
+	Unconfirmed           = 2
+	Confirmed             = 3
+	Mine                  = 4
+	Done                  = 5
 )
 
 
@@ -46,9 +53,10 @@ type Order struct {
 	DirectionDown bool
 	CabOrder      bool
 	Cost          [NumberOfElevators]int
-	Status        int  // 0: No active order , 1: waiting for cost, 2: unconfirmed, 3: confirmed, 4: mine, 5: done
-	TimedOut      bool // Time? or Id?
+	Status        Status // 0: No active order , 1: waiting for cost, 2: unconfirmed, 3: confirmed, 4: mine, 5: done
+	TimedOut      bool   // Time? or Id?
 }
+
 
 
 type Elevator struct {
