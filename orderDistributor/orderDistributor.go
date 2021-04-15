@@ -83,6 +83,17 @@ func pollOrders(orderIn chan Order) {
 	}
 }
 
+func orderFindIdWithLowestCost(order Order) (int) {
+	lowestCostId = ElevatorId
+	for elevator := 0; elevator < NumberOfElevators; elevator++ {
+		if order.Cost[elevator] < order.Cost[lowestCostId] {
+			lowestCostId = elevator
+		} 
+	}
+	return elevator
+}
+
+
 func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorState <-chan Elevator) {
 	fmt.Println("Starting OrderDistributor...")
 	var queue [NumberOfFloors]Order
@@ -104,11 +115,49 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 			switch order.Status {
 			case NoActiveOrder:
 			case WaitingForCost:
-				fmt.Println("Status is Waiting for cost")
+				fmt.Println("Status is Waiting for cost, F: ", order.Floor)
+
+				if order.CabOrder == true {
+					order.Cost[ElevatorId] = 5 // Bruk costfunction
+					order.Status = Confirmed
+					order.CabOrder = false
+					orderToNetwork <- order
+					order.CabOrder = true
+					order.Status = Mine
+					queue[order.Floor] = order
+				}
 				if queue[order.Floor].Status > WaitingForCost {
-					fmt.Println("Already higher status than Waiting for cost")
+					fmt.Println("Already higher status than Waiting for cost, F:" order.Floor)
 					break
 				}
+				queue[order.Floor].DirectionUp |= order.DirectionUp
+				queue[order.Floor].DirectionDown |= order.DirectionDown
+
+				for elevator := 0; elevator < NumberOfElevators; elevator++ {
+					if order.Cost[elevator] != MaxCost {
+						queue[order.Floor].Cost = order.Cost[elevator] // Sjekke om det ikke oppstår uenigheter
+					}
+				}
+				if queue[order.Floor].Cost[ElevatorId] == MaxCost {
+					queue[order.Floor].Cost[ElevatorId] = 5 // Costfnc
+					orderToNetwork <- queue[order.Floor]
+					orderTimer(order, orderIn, 1)
+				}
+
+				allCostsPresent := true
+				for elevator := 0; elevator < NumberOfElevators; elevator++ {
+					if queue[order.Floor].Cost[elevator] == MaxCost {
+						allCostsPresent = false
+					}
+				}
+
+				if allCostsPresent || order.TimedOut {
+					queue[order.Floor].Status = Unconfirmed
+					orderBuffer(queue[order.Floor], orderIn)
+					orderToNetwork <- queue[order.Floor]
+				}
+				break
+				/*
 				if order.Cost[ElevatorId] == MaxCost {
 					cost := 4 // add costfnc
 					order.Cost[ElevatorId] = cost
@@ -134,41 +183,43 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					go orderBuffer(order, orderIn)
 				}
 				break
+				*/
 
 			case Unconfirmed:
-				fmt.Println("Status is Unconfirmed")
+				fmt.Println("Status is Unconfirmed, F: ", order.Floor)
 				if queue[order.Floor].Status > Unconfirmed {
-					fmt.Println("Already higher status than Unconfirmed")
+					fmt.Println("Already higher status than Unconfirmed, F: ", order.Floor)
 					break
 				}
 				if order.TimedOut == true {
-					order.Status = Mine
-					queue[order.Floor] = order
-					order.TimedOut = false
-					go orderBuffer(order, orderIn)
+					queue[order.Floor].Cost[orderFindIdWithLowestCost(order)] = MaxCost
+					orderBuffer(queue[order.Floor], orderIn)
 				}
 
-				hasLowestCost := true
-				for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
-					if order.Cost[elevatorNumber]*10+elevatorNumber < order.Cost[ElevatorId]*10+ElevatorId {
-						hasLowestCost = false
-					}
-				}
-				if hasLowestCost {
-					order.Status = Confirmed
-					orderToNetworkChannel <- order
-					order.Status = Mine
-					queue[order.Floor] = order
-					go orderBuffer(order, orderIn)
+				if orderFindIdWithLowestCost(order) == ElevatorId {
+					queue[order.Floor].Status = Confirmed
+					orderToNetwork <- queue[order.Floor]
+					queue[order.Floor].Status = Mine
+					orderBuffer(queue[order.Floor], orderIn)
 				} else {
-					go orderTimer(order, orderIn, 1)
+					orderTimer(queue[order.Floor], orderIn, 1)
 				}
 				break
 
 			case Confirmed:
-				fmt.Println("Status is Confirmed")
+				// Sette på lys
+
+				if order.DirectionUp == true {
+					elevto.SetButtonLamp(elevio.BT_HallUp, order.Floor, true)
+				}
+				if order.DirectionDown == true {
+					elevto.SetButtonLamp(elevio.BT_HallDown, order.Floor, true)
+				}
+
+
+				fmt.Println("Status is Confirmed, F: ", order.Floor)
 				if queue[order.Floor].Status > Confirmed {
-					fmt.Println("Already higher status than Confirmed")
+					fmt.Println("Already higher status than Confirmed, F: " order.Floor)
 					break
 				}
 				if order.TimedOut == true {
