@@ -5,16 +5,9 @@ import (
 	"time"
 
 	"../elevio"
-	"../fsm"
 	"../timer"
 	"../orderDistributor"
 )
-
-func FSM_test() {
-	fsm.InitFSM(4)
-	go fsm.runElevator()
-
-}
 
 func Timer_test() {
 	timeout := make(chan int)
