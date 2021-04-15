@@ -84,13 +84,13 @@ func pollOrders(orderIn chan Order) {
 }
 
 func orderFindIdWithLowestCost(order Order) (int) {
-	lowestCostId = ElevatorId
+	lowestCostId := ElevatorId
 	for elevator := 0; elevator < NumberOfElevators; elevator++ {
 		if order.Cost[elevator] < order.Cost[lowestCostId] {
 			lowestCostId = elevator
 		} 
 	}
-	return elevator
+	return lowestCostId
 }
 
 
@@ -106,6 +106,14 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 	for floor := 0; floor < NumberOfFloors; floor++ {
 		queue[floor].Floor = floor
+		queue[floor].DirectionUp = false
+		queue[floor].DirectionDown = true
+		queue[floor].CabOrder = false
+		for elevator := 0; elevator < NumberOfElevators; elevator++ {
+			queue[floor].Cost[elevator] = MaxCost
+		}
+		queue[floor].Status = NoActiveOrder
+		queue[floor].TimedOut = false
 	}
 	for {
 		select {
@@ -118,30 +126,37 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				fmt.Println("Status is Waiting for cost, F: ", order.Floor)
 
 				if order.CabOrder == true {
-					order.Cost[ElevatorId] = 5 // Bruk costfunction
+					order.Cost[ElevatorId] = 1 // Bruk costfunction
 					order.Status = Confirmed
 					order.CabOrder = false
-					orderToNetwork <- order
+					orderToNetworkChannel <- order
 					order.CabOrder = true
 					order.Status = Mine
 					queue[order.Floor] = order
-				}
-				if queue[order.Floor].Status > WaitingForCost {
-					fmt.Println("Already higher status than Waiting for cost, F:" order.Floor)
+					go orderBuffer(order, orderIn)
 					break
 				}
-				queue[order.Floor].DirectionUp |= order.DirectionUp
-				queue[order.Floor].DirectionDown |= order.DirectionDown
+				if queue[order.Floor].Status > WaitingForCost {
+					fmt.Println("Already higher status than Waiting for cost, F:", order.Floor)
+					break
+				}
+				if queue[order.Floor].DirectionUp == false {
+					queue[order.Floor].DirectionUp = order.DirectionUp
+				}
+				if queue[order.Floor].DirectionDown == false {
+					queue[order.Floor].DirectionDown = order.DirectionDown
+				}
 
 				for elevator := 0; elevator < NumberOfElevators; elevator++ {
 					if order.Cost[elevator] != MaxCost {
-						queue[order.Floor].Cost = order.Cost[elevator] // Sjekke om det ikke oppstår uenigheter
+						queue[order.Floor].Cost[elevator] = order.Cost[elevator] // Sjekke om det ikke oppstår uenigheter
 					}
 				}
 				if queue[order.Floor].Cost[ElevatorId] == MaxCost {
-					queue[order.Floor].Cost[ElevatorId] = 5 // Costfnc
-					orderToNetwork <- queue[order.Floor]
-					orderTimer(order, orderIn, 1)
+					fmt.Println("Adding own cost")
+					queue[order.Floor].Cost[ElevatorId] = 3 // Costfnc
+					orderToNetworkChannel <- queue[order.Floor]
+					go orderTimer(order, orderIn, 1)
 				}
 
 				allCostsPresent := true
@@ -152,38 +167,12 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 
 				if allCostsPresent || order.TimedOut {
+					fmt.Println("WFC ACP or order TO")
 					queue[order.Floor].Status = Unconfirmed
-					orderBuffer(queue[order.Floor], orderIn)
-					orderToNetwork <- queue[order.Floor]
+					go orderBuffer(queue[order.Floor], orderIn)
+					orderToNetworkChannel <- queue[order.Floor]
 				}
 				break
-				/*
-				if order.Cost[ElevatorId] == MaxCost {
-					cost := 4 // add costfnc
-					order.Cost[ElevatorId] = cost
-					order.TimedOut = false
-					orderToNetworkChannel <- order
-					queue[order.Floor] = order
-
-					go orderTimer(order, orderIn, 2)
-				}
-
-				// Not sure if this is the best solution
-				allCostsPresent := true
-				for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
-					if order.Cost[elevatorNumber] == MaxCost {
-						allCostsPresent = false
-					}
-				}
-				// Hvis timeout, må sende ordre fra queue
-				if allCostsPresent || order.TimedOut {
-					order.Status = Unconfirmed
-					queue[order.Floor] = order
-					order.TimedOut = false
-					go orderBuffer(order, orderIn)
-				}
-				break
-				*/
 
 			case Unconfirmed:
 				fmt.Println("Status is Unconfirmed, F: ", order.Floor)
@@ -193,66 +182,69 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 				if order.TimedOut == true {
 					queue[order.Floor].Cost[orderFindIdWithLowestCost(order)] = MaxCost
-					orderBuffer(queue[order.Floor], orderIn)
+					go orderBuffer(queue[order.Floor], orderIn)
 				}
 
 				if orderFindIdWithLowestCost(order) == ElevatorId {
 					queue[order.Floor].Status = Confirmed
-					orderToNetwork <- queue[order.Floor]
+					orderToNetworkChannel <- queue[order.Floor]
 					queue[order.Floor].Status = Mine
-					orderBuffer(queue[order.Floor], orderIn)
+					go orderBuffer(queue[order.Floor], orderIn)
 				} else {
-					orderTimer(queue[order.Floor], orderIn, 1)
+					go orderTimer(queue[order.Floor], orderIn, 1)
 				}
 				break
 
 			case Confirmed:
 				// Sette på lys
-
 				if order.DirectionUp == true {
-					elevto.SetButtonLamp(elevio.BT_HallUp, order.Floor, true)
+					elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, true)
 				}
 				if order.DirectionDown == true {
-					elevto.SetButtonLamp(elevio.BT_HallDown, order.Floor, true)
+					elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, true)
 				}
-
 
 				fmt.Println("Status is Confirmed, F: ", order.Floor)
 				if queue[order.Floor].Status > Confirmed {
-					fmt.Println("Already higher status than Confirmed, F: " order.Floor)
+					fmt.Println("Already higher status than Confirmed, F: ", order.Floor)
 					break
 				}
+
 				if order.TimedOut == true {
-					order.Status = Mine
-					order.TimedOut = false
+					queue[order.Floor].Status = Unconfirmed
+					order.Status = Unconfirmed
 					go orderBuffer(order, orderIn)
 					break
 				}
 
-				order.TimedOut = false
 				queue[order.Floor] = order
-				go orderTimer(order, orderIn, (10 + ElevatorId)) // Må endres til et uttrykk med costen
-				break
+				go orderTimer(order, orderIn, order.Cost[orderFindIdWithLowestCost(order)]*2) // Må endres til et uttrykk med costen
+				break // Hva skjer hvis alle har MaxCost?
 
 			case Mine:
-				fmt.Println("Status is Mine")
-				if queue[order.Floor].Status > Mine || (queue[order.Floor].Status < Mine && order.TimedOut == true) {
-					fmt.Println("Order with status Mine cancelled")
-					break
-				}
-				if order.TimedOut == true {
-					fmt.Println("Order with status Mine has Timed out")
-					order.Cost[ElevatorId] = MaxCost
-					order.Status = Unconfirmed
-					orderToNetworkChannel <- order
+				fmt.Println("Status is Mine, F: ", order.Floor)
+				if queue[order.Floor].Status > Mine {
+					fmt.Println("Order with status Mine cancelled, F: ", order.Floor)
 					break
 				}
 
-				go orderTimer(order, orderIn, 5) // Må også endres
+				if order.TimedOut == true && order.CabOrder == false {
+					fmt.Println("Order with status Mine has Timed out, F:", order.Floor)
+					order.Status = Confirmed
+					queue[order.Floor].Status = Confirmed
+					orderToNetworkChannel <- order
+					break
+				} else if order.TimedOut == true {
+					fmt.Println("Error: Could not expedite Caborder!!")
+					break
+				}
+
+				// send til fsm
+				go orderTimer(order, orderIn, order.Cost[ElevatorId]*2) // Må også endres
 				break
 
 			case Done:
-				fmt.Println("Status is Done")
+				fmt.Println("Status is Done, F: ", order.Floor)
 				order.Status = NoActiveOrder
 				order.DirectionUp = false
 				order.DirectionDown = false
