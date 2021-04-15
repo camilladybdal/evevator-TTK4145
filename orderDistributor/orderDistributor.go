@@ -124,7 +124,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 		case order := <-orderIn:
 			fmt.Println("Reading order...")
 			if queue[order.Floor].Status == NoActiveOrder && order.TimedOut {
-				fmt.Println("Order early break, F: ", order.Floor)
+				fmt.Println("Order early break senor, F: ", order.Floor)
 				break
 			}
 
