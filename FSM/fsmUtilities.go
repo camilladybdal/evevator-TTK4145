@@ -3,6 +3,7 @@ package fsm
 import (
 	"../elevio"
 	. "../types"
+	"fmt"
 )
 
 func getDirection(currentFloor int, destinationFloor int) elevio.MotorDirection {
@@ -31,24 +32,27 @@ func queueSearch(QueueDirection elevio.MotorDirection, elevator Elevator) int {
 		QueueDirection = elevio.MD_Up
 	}
 
+	fmt.Println("QUEUESEARCH, MY DIRECTION IS: ", QueueDirection);
+	fmt.Println("QUEUESEARCH, MY CUREENT FLOOR IS: ", elevator.CurrentFloor);
+
 
 	if QueueDirection == elevio.MD_Up {
 		for floor := elevator.CurrentFloor; floor < NumFloors; floor++ {
 			if elevator.UpQueue[floor] == 1 {
 				nextFloor = floor
-				break
+				return nextFloor
 			}
 		}
 		for floor := NumFloors - 1; floor >= 0; floor-- {
 			if elevator.DownQueue[floor] == 1 {
 				nextFloor = floor
-				break
+				return nextFloor
 			}
 		}
 		for floor := 0; floor < elevator.CurrentFloor; floor++ {
 			if elevator.UpQueue[floor] == 1 {
 				nextFloor = floor
-				break
+				return nextFloor
 			}
 		}
 	}
@@ -57,19 +61,19 @@ func queueSearch(QueueDirection elevio.MotorDirection, elevator Elevator) int {
 		for floor := elevator.CurrentFloor; floor >= 0; floor-- {
 			if elevator.DownQueue[floor] == 1 {
 				nextFloor = floor
-				break
+				return nextFloor
 			}
 		}
 		for floor := 0; floor < NumFloors; floor++ {
 			if elevator.UpQueue[floor] == 1 {
 				nextFloor = floor
-				break
+				return nextFloor
 			}
 		}
 		for floor := elevator.CurrentFloor; floor >= 0; floor-- {
 			if elevator.DownQueue[floor] == 1 {
 				nextFloor = floor
-				break
+				return nextFloor
 			}
 		}
 	}

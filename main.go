@@ -5,7 +5,7 @@ import (
 	"./fsm"
 	//"./timer"
 	. "./types"
-	"fmt"
+	//"fmt"
 	"time"
 )
 
@@ -33,7 +33,6 @@ func main() {
 
 	go fsm.RunElevator(channels, OrderUpdate, elevInfo)
 
-
 	//lage test-ordre
 	var order1 Order
 	order1.Floor = 3
@@ -46,22 +45,33 @@ func main() {
 	order2.CabOrder = false
 
 	var order3 Order
-	order3.Floor = 0
+	order3.Floor = 1
 	order3.DirectionUp = true
 	order3.CabOrder = false
 
+	var order4 Order
+	order4.Floor = 3
+	order4.DirectionDown = true
+	order4.CabOrder = false
 
-	fmt.Println("sending")
+	var order5 Order
+	order5.Floor = 0
+	order5.DirectionUp = false
+	order5.CabOrder = true
+
+	var order6 Order
+	order6.Floor = 2
+	order6.DirectionUp = true
+	order6.CabOrder = false
+
 	channels.NewOrder <- order1
-	fmt.Println("sent")
-
-	fmt.Println("sending")
 	channels.NewOrder <- order2
-	fmt.Println("sent")
-
-	fmt.Println("sending")
+	time.Sleep(4*time.Second)
 	channels.NewOrder <- order3
-	fmt.Println("sent")
+	time.Sleep(20*time.Second)
+	channels.NewOrder <- order4
+	channels.NewOrder <- order5
+	channels.NewOrder <- order6
 
 	select{}
 
