@@ -57,6 +57,9 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut) 
 					fmt.Println("Started Doortimer")
 
+					newOrder.Status = Done 
+					OrderUpdate <- newOrder
+
 					State = DOOROPEN
 
 				} else {
@@ -113,7 +116,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				if elevatorInfo.CurrentFloor == newOrder.Floor{
 
 					elevio.SetDoorOpenLamp(true)
-					CountDownTimer(DOOROPENTIME, channels.DoorTimedOut) 
+					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut) 
 					fmt.Println("Started Doortimer")
 					removeFromQueue(&elevatorInfo)
 
@@ -169,7 +172,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					var Expidized_order Order
 					Expidized_order.Floor = floorArrival
 					Expidized_order.Status = 5 //replace with Done
-					//OrderUpdate <- Expidized_order
+					OrderUpdate <- Expidized_order
 
 					//starte door-timer
 					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut)
@@ -193,9 +196,20 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				if nextFloor == floorArrival{
 					elevio.SetMotorDirection(elevio.MD_Stop)
 					elevatorInfo.Direction = elevio.MD_Stop
+
+					//skal denne stå her?
+					var Expidized_order Order
+					Expidized_order.Floor = floorArrival
+					Expidized_order.Status = Done 
+					OrderUpdate <- Expidized_order
+
+					elevio.SetDoorOpenLamp(true)					
+					removeFromQueue(&elevatorInfo)
+
 					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut)
 					fmt.Println("Started doortimer")
 					State = DOOROPEN
+
 				} else {
 
 					go StoppableTimer(PASSINGFLOORTIME, 1, channels.StopImmobileTimer, channels.Immobile)
@@ -211,19 +225,15 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 			}
 
 
-
-
 		
 		case <- channels.DoorTimedOut:
 			fmt.Println("Door has timedout")
-			fmt.Println("my state is : ", State)
-			
+			fmt.Println("my state is : ", State)			
 			
 			switch State{
 			case IDLE:
 			case MOVING:
 			case DOOROPEN:
-				
 				
 				/*ER DET HER PROBLEMET LIGGER?*/
 				if obstructed == true{
@@ -334,7 +344,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 			emptyQueue(&elevatorInfo)
 
 			fmt.Println("Queue should be empty now: ")
-			fmt.Println("nextfloor should be 3 tho :" ,nextFloor)
+			fmt.Println("nextfloor is:" ,nextFloor)
 
 		
 
