@@ -355,7 +355,6 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 			fmt.Println(elevatorInfo.DownQueue[i])
 			}
 
-
 			//update elevInfo
 			State = IMMOBILE
 			ElevState <- elevatorInfo
