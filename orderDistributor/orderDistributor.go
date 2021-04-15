@@ -1,6 +1,5 @@
 package orderDistributor
 
-// imports
 import (
 	"fmt"
 	"time"
@@ -9,10 +8,8 @@ import (
 	"../elevio"
 	"../network/bcast"
 	. "../types"
-	//"../costfnc"
+	. "../costfnc"
 )
-
-// Slå sammen netverksfunksjonene
 
 func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork chan<- Order) {
 	port := Port
@@ -102,7 +99,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 	go orderNetworkCommunication(orderToNetworkChannel, orderIn)
 
-	//var elevatorState Elevator
+	var elevatorState Elevator
 
 	for floor := 0; floor < NumberOfFloors; floor++ {
 		queue[floor].Floor = floor
@@ -126,7 +123,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				fmt.Println("Status is Waiting for cost, F: ", order.Floor)
 
 				if order.CabOrder == true {
-					order.Cost[ElevatorId] = 1 // Bruk costfunction
+					order.Cost[ElevatorId] = Costfunction(elevatorState, order) // Bruk costfunction
 					order.Status = Confirmed
 					order.CabOrder = false
 					orderToNetworkChannel <- order
@@ -154,7 +151,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 				if queue[order.Floor].Cost[ElevatorId] == MaxCost {
 					fmt.Println("Adding own cost")
-					queue[order.Floor].Cost[ElevatorId] = 3 // Costfnc
+					queue[order.Floor].Cost[ElevatorId] = Costfunction(elevatorState, order)
 					orderToNetworkChannel <- queue[order.Floor]
 					go orderTimer(order, orderIn, 1)
 				}
@@ -240,6 +237,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 
 				// send til fsm
+				orderOut <- queue[order.Floor]
 				go orderTimer(order, orderIn, order.Cost[ElevatorId]*2) // Må også endres
 				break
 
@@ -257,13 +255,12 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				break
 			}
 			break
-		default:
 
-			// Getting the latest elevatorState
-			/*
-				case elevatorState = <- getElevatorState:
-					break
-			*/
+		case elevatorState = <- getElevatorState:
+			break
+
+		default:
+			
 		}
 	}
 }
