@@ -68,6 +68,7 @@ func pollOrders(orderIn chan Order) {
 			fmt.Println("newButtonEvent")
 			var newOrder Order
 			newOrder.Floor = buttonEvent.Floor
+			fmt.Println("Button pressed, F: ", newOrder.Floor)
 			buttonType := buttonEvent.Button
 			newOrder.DirectionUp = (buttonType == elevio.BT_HallUp)
 			newOrder.DirectionDown = (buttonType == elevio.BT_HallDown)
@@ -122,6 +123,10 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 		// Order pipeline
 		case order := <-orderIn:
 			fmt.Println("Reading order...")
+			if queue[order.Floor].Status == NoActiveOrder && order.TimedOut {
+				break
+			}
+
 			switch order.Status {
 			case NoActiveOrder:
 			case WaitingForCost:
@@ -244,6 +249,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 				// send til fsm
 				orderOut <- queue[order.Floor]
+				fmt.Println("Order sent to FSM, F: ", order.Floor)
 				go orderTimer(order, orderIn, order.Cost[ElevatorId]*2) // Må også endres
 				break
 
@@ -252,6 +258,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				order.Status = NoActiveOrder
 				order.DirectionUp = false
 				order.DirectionDown = false
+				order.CabOrder = false
 				order.TimedOut = false
 				for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
 					order.Cost[elevatorNumber] = MaxCost
