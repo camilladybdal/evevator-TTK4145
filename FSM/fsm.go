@@ -13,8 +13,6 @@ import (
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 func InitFSM(numFloors int) {
-
-	//go to first floor
 	elevio.SetMotorDirection(elevio.MD_Down)
 	for elevio.GetFloor() != 0 {
 	}
@@ -90,7 +88,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					State = MOVING
 
 					//update elev-info
-					//ElevState <- elevatorInfo
+					ElevState <- elevatorInfo
 				}
 			case MOVING:
 					//legger til i køen
@@ -109,7 +107,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				}
 
 				//update elev-info
-				//ElevState <- elevatorInfo	
+				ElevState <- elevatorInfo	
 					
 			case DOOROPEN:
 				if elevatorInfo.CurrentFloor == newOrder.Floor{
@@ -120,8 +118,8 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					removeFromQueue(&elevatorInfo)
 
 					//send a completed order message to OrderDistributed
-					newOrder.Status = 5 //replace with Done
-					//OrderUpdate <- newOrder
+					newOrder.Status = Done 
+					OrderUpdate <- newOrder
 
 				} else {
 					//legger til i køen
@@ -132,7 +130,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 						elevatorInfo.DownQueue[newOrder.Floor] = 1
 					}
 					//update elev-info
-					//ElevState <- elevatorInfo					
+					ElevState <- elevatorInfo					
 				}
 			case IMMOBILE:
 			}
@@ -179,7 +177,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					State = DOOROPEN
 
 					//update elev-info
-					//ElevState <- elevatorInfo
+					ElevState <- elevatorInfo
 				} else {
 					//Restart motorTimer
 					channels.StopImmobileTimer <- true
@@ -209,7 +207,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				
 				//si at jeg ikke har IMMOBILE lenger til Jon, da sender jon mine cabbies
 				elevatorInfo.Immobile = false
-				//ElevState <- elevatorInfo
+				ElevState <- elevatorInfo
 			}
 
 
@@ -288,7 +286,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				}
 
 				//update elev-info
-				//ElevState <- elevatorInfo
+				ElevState <- elevatorInfo
 
 			case IMMOBILE:
 				
@@ -301,7 +299,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					fmt.Println("Restarted doortimer")
 
 				}
-				//ElevState <- elevatorInfo 
+				ElevState <- elevatorInfo 
 				//elevstaten har jo ikke endret seg nå...
 			}
 
@@ -349,12 +347,11 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 
 			//update elevInfo
-			//ElevState <- elevatorInfo
 			State = IMMOBILE
+			ElevState <- elevatorInfo
 
-
+		
 		default:
-
 		}
 	}
 }
