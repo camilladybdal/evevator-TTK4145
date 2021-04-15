@@ -46,7 +46,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 	for{
 		select{
 		case newOrder := <- channels.NewOrder:
-			fmt.Println("New order to floor: ", newOrder.Floor)
+			fmt.Println("----New order to floor: ", newOrder.Floor)
 
 			switch State{
 			case IDLE:

@@ -23,15 +23,14 @@ func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork cha
 		select {
 		case order := <-orderToNetwork:
 			fmt.Println("Order sent to network")
-			/*
-			redundancy := 1
+			
+			redundancy := 2
 			for redundancy > 0 {
 				networkTransmit <- order
 				time.Sleep(10 * time.Millisecond)
 				redundancy--
 			}
-			*/
-			networkTransmit <- order
+			//networkTransmit <- order
 
 		case order := <-networkRecieve:
 			fmt.Println("Order recv from network")
@@ -54,7 +53,7 @@ func orderTimer(order Order, timedOut chan<- Order, duration int) {
 }
 
 func orderBuffer(order Order, orderIn chan<- Order) {
-	fmt.Println("Order in buffer")
+	fmt.Println("Order in buffer, F: ", order.Floor)
 	orderIn <- order
 }
 
