@@ -2,12 +2,13 @@ package main
 
 import (
 
-	//"./fsm"
+	. "./FSM"
 	//"./timer"
 	"./elevio"
 	. "./orderDistributor"
 	. "./types"
 	"fmt"
+	. "./config"
 )
 
 type HelloMsg struct {
@@ -18,14 +19,30 @@ type HelloMsg struct {
 func main() {
 
 	fmt.Println("Hellooooo")
-	orderOut := make(chan Order)
-	orderIn := make(chan Order)
+	// orderOut := make(chan Order)
+	// orderIn := make(chan Order)
+	
+
+	// FSM channels
+	var fsmChannels FsmChannels
+	fsmChannels.FloorReached = make(chan int)
+	fsmChannels.NewOrder = make(chan Order)
+	fsmChannels.Obstruction = make(chan bool)
+	fsmChannels.ElevatorState = make(chan Elevator)
+	fsmChannels.DoorTimedOut = make(chan bool)
+	fsmChannels.Immobile = make(chan int)
+	fsmChannels.StopImmobileTimer = make(chan bool)
+
+	orderUpdate := make(chan Order)
 	getElevatorState := make(chan Elevator)
 
-	elevio.Init("localhost:15657", 4)
+
+	elevio.Init("localhost:15657", NumberOfFloors)
+	InitFSM(NumberOfFloors)
 	//elevio.Init("10.0.0.5:15658", 4)
 
-	go OrderDistributor(orderOut, orderIn, getElevatorState)
+	go OrderDistributor(fsmChannels.NewOrder, orderUpdate, getElevatorState)
+	go RunElevator(fsmChannels, orderUpdate, getElevatorState)
 	for {
 	}
 	//networkTransmit := make(chan Order)

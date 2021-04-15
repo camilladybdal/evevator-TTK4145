@@ -23,15 +23,19 @@ func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork cha
 		select {
 		case order := <-orderToNetwork:
 			fmt.Println("Order sent to network")
+			/*
 			redundancy := 1
 			for redundancy > 0 {
 				networkTransmit <- order
 				time.Sleep(10 * time.Millisecond)
 				redundancy--
 			}
+			*/
+			networkTransmit <- order
+
 		case order := <-networkRecieve:
 			fmt.Println("Order recv from network")
-			orderFromNetwork <- order
+			go orderBuffer(order, orderFromNetwork)
 		}
 	}
 }
@@ -87,6 +91,7 @@ func orderFindIdWithLowestCost(order Order) (int) {
 			lowestCostId = elevator
 		} 
 	}
+	fmt.Println("Lowest cost id: ", lowestCostId)
 	return lowestCostId
 }
 
@@ -183,6 +188,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 
 				if orderFindIdWithLowestCost(order) == ElevatorId {
+					fmt.Println("Has lowest cost")
 					queue[order.Floor].Status = Confirmed
 					orderToNetworkChannel <- queue[order.Floor]
 					queue[order.Floor].Status = Mine
@@ -254,7 +260,6 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				orderToNetworkChannel <- order
 				break
 			}
-			break
 
 		case elevatorState = <- getElevatorState:
 			break
