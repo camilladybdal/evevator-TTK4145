@@ -87,8 +87,8 @@ func pollOrders(orderIn chan Order) {
 func orderFindIdWithLowestCost(order Order) (int) {
 	lowestCostId := ElevatorId
 	for elevator := 0; elevator < NumberOfElevators; elevator++ {
-		if order.Cost[elevator] < order.Cost[lowestCostId] {
-			lowestCostId = elevator
+		if 10*order.Cost[elevator]+elevator < 10*order.Cost[lowestCostId]+lowestCostId {
+			lowestCostId = elevator //Tenk mer på dette etterpå
 		} 
 	}
 	fmt.Println("Lowest cost id: ", lowestCostId)
