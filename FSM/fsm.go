@@ -38,6 +38,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 	var nextFloor int
 	var obstructed bool
+	var immobilityNextFloor int
 
 	go elevio.PollFloorSensor(channels.FloorReached)
 	go elevio.PollObstructionSwitch(channels.Obstruction)
@@ -171,23 +172,14 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 			switch State{
 			case IDLE:
 			case MOVING:
-
+				
 				nextFloor = queueSearch(QueueDirection, elevatorInfo)
 				fmt.Println("---- I am heding for this floor: ", nextFloor)
-
-				/*
-				fmt.Println("---- My queue after adding the new order to it is: ")
-
-					fmt.Println("Upqueue:: ")
-					for i:=0;i<NumFloors;i++{
-						fmt.Println(elevatorInfo.UpQueue[i])
-					}
-					fmt.Println("Downqueue: ")
-					for i:=0;i<NumFloors;i++{
-						fmt.Println(elevatorInfo.DownQueue[i])
-					}
-
-				*/
+				
+				//hvis den kommer her og har -1 har den vært immobil ?
+				if nextFloor == -1 { 
+					nextFloor = immobilityNextFloor
+				}
 
 				if nextFloor == floorArrival{
 
@@ -305,14 +297,6 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					elevio.SetDoorOpenLamp(false)
 					nextFloor = queueSearch(QueueDirection, elevatorInfo)
 
-					/*FOR TESTING PURPOSES*/
-					for i:=0;i<NumFloors;i++{
-						fmt.Println(elevatorInfo.UpQueue[i])
-					}
-					for i:=0;i<NumFloors;i++{
-					fmt.Println(elevatorInfo.DownQueue[i])
-					}
-
 
 					dir := getDirection(elevatorInfo.CurrentFloor, nextFloor)
 					elevio.SetMotorDirection(dir)
@@ -383,7 +367,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 			fmt.Println("---- Queue should be empty now: ")
 			fmt.Println("----nextfloor is:" ,nextFloor)
 
-		
+			immobilityNextFloor = nextFloor
 
 			for i:=0;i<NumFloors;i++{
 				fmt.Println(elevatorInfo.UpQueue[i])
