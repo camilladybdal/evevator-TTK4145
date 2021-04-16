@@ -33,6 +33,9 @@ func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork cha
 			//networkTransmit <- order
 
 		case order := <-networkRecieve:
+			if order.FromId == ElevatorId {
+				break
+			}
 			fmt.Println("*** order recv from network: \t", order.Floor)
 			go orderBuffer(order, orderFromNetwork)
 		}
@@ -109,6 +112,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 	go orderNetworkCommunication(orderToNetworkChannel, orderIn)
 
 	var elevatorState Elevator
+	var elevatorImmobile bool
 
 	for floor := 0; floor < NumberOfFloors; floor++ {
 		queue[floor].Floor = floor
@@ -120,6 +124,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 		}
 		queue[floor].Status = NoActiveOrder
 		queue[floor].TimedOut = false
+		queue[floor].FromId = ElevatorId
 	}
 	for {
 		select {
@@ -263,6 +268,8 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 			case Done:
 				fmt.Println("****** ORDER DONE: \t", order.Floor)
+				elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, false)
+				elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, false)
 				order.Status = NoActiveOrder
 				order.DirectionUp = false
 				order.DirectionDown = false
@@ -277,6 +284,10 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 			}
 
 		case elevatorState = <- getElevatorState:
+			if elevatorState.Immobile && !elevatorImmobile {
+				fmt.Println("*** DO THING TO MAKE THE QUEUE BE BETTER SEÑOR!")
+			}
+			elevatorImmobile = elevatorState.Immobile
 			break
 
 		default:

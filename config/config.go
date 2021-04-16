@@ -6,7 +6,7 @@ const (
 	NumberOfElevators = 2
 	NumberOfFloors    = 4
 	MaxCost           = 999999999
-	ElevatorId        = 0
+	ElevatorId        = 1
 
 	ElevatorAddress   = "localhost:15657"
 	//ElevatorAddress   = "10.24.1.24:15657"

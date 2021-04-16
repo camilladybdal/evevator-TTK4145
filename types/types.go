@@ -55,6 +55,7 @@ type Order struct {
 	Cost          [NumberOfElevators]int
 	Status        Status // 0: No active order , 1: waiting for cost, 2: unconfirmed, 3: confirmed, 4: mine, 5: done
 	TimedOut      bool   // Time? or Id?
+	FromId		  int
 }
 
 
