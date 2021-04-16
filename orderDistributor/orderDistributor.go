@@ -216,7 +216,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					queue[order.Floor].Status = Mine
 					go orderBuffer(queue[order.Floor], orderIn)
 				} else {
-					go orderTimer(queue[order.Floor], orderIn, queue[order.Floor].Cost[orderFindIdWithLowestCost(order)*3+5])
+					go orderTimer(queue[order.Floor], orderIn, queue[order.Floor].Cost[orderFindIdWithLowestCost(order)]*3+5)
 				}
 				break
 
