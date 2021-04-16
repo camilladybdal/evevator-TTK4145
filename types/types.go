@@ -37,7 +37,7 @@ const (
 type Status int
 
 const (
-	NoActiveOrder  Status = 0
+	NoActiveOrder  Status = 0 //burde byttes til NotActive
 	WaitingForCost        = 1
 	Unconfirmed           = 2
 	Confirmed             = 3
