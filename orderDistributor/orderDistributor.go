@@ -93,6 +93,7 @@ func orderFindIdWithLowestCost(order Order) (int) {
 	if order.Cost[lowestCostId] == MaxCost {
 		lowestCostId = ElevatorId
 		fmt.Println("** all elevators MAXCOST: \t", order.Floor)
+
 	}
 	fmt.Println("*** lowest cost id: ", lowestCostId, " floor: \t", order.Floor)
 	return lowestCostId
