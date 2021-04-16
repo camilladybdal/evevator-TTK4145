@@ -25,21 +25,21 @@ func checkOrdersPresent(elevator Elevator) bool{
 }
 
 func queueSearch(QueueDirection elevio.MotorDirection, elevator Elevator) int {
-	nextFloor := 0
+	nextFloor := -1
 
 	//first times
 	if QueueDirection == elevio.MD_Stop{
 		QueueDirection = elevio.MD_Up
 	}
 
-	fmt.Println("QUEUESEARCH, MY DIRECTION IS: ", QueueDirection);
-	fmt.Println("QUEUESEARCH, MY CUREENT FLOOR IS: ", elevator.CurrentFloor);
-
+	//fmt.Println(" ---- QUEUESEARCH, MY DIRECTION IS: ", QueueDirection);
+	//fmt.Println(" ---- QUEUESEARCH, MY CUREENT FLOOR IS: ", elevator.CurrentFloor);
 
 	if QueueDirection == elevio.MD_Up {
 		for floor := elevator.CurrentFloor; floor < NumFloors; floor++ {
 			if elevator.UpQueue[floor] == 1 {
 				nextFloor = floor
+
 				return nextFloor
 			}
 		}
@@ -58,6 +58,7 @@ func queueSearch(QueueDirection elevio.MotorDirection, elevator Elevator) int {
 	}
 
 	if QueueDirection == elevio.MD_Down{
+
 		for floor := elevator.CurrentFloor; floor >= 0; floor-- {
 			if elevator.DownQueue[floor] == 1 {
 				nextFloor = floor
@@ -70,7 +71,7 @@ func queueSearch(QueueDirection elevio.MotorDirection, elevator Elevator) int {
 				return nextFloor
 			}
 		}
-		for floor := elevator.CurrentFloor; floor >= 0; floor-- {
+		for floor := NumFloors-1; floor >= 0; floor-- {
 			if elevator.DownQueue[floor] == 1 {
 				nextFloor = floor
 				return nextFloor
