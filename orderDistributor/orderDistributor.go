@@ -160,7 +160,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					break
 				}
 				if queue[order.Floor].Status > WaitingForCost {
-					fmt.Println("*** at higher status: \t", order.Floor)
+					fmt.Println("*** at higher status: \t", order.Floor, queue[order.Floor].Status)
 					break
 				}
 				queue[order.Floor].Status = order.Status
@@ -216,7 +216,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					queue[order.Floor].Status = Mine
 					go orderBuffer(queue[order.Floor], orderIn)
 				} else {
-					go orderTimer(queue[order.Floor], orderIn, 1)
+					go orderTimer(queue[order.Floor], orderIn, queue[order.Floor].Cost[orderFindIdWithLowestCost(order)*3+5])
 				}
 				break
 
@@ -270,7 +270,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				// send til fsm
 				orderOut <- queue[order.Floor]
 				fmt.Println("*** ORDER SENT TO FSM: \t", order.Floor)
-				go orderTimer(order, orderIn, order.Cost[ElevatorId]*2) // Må også endres
+				go orderTimer(order, orderIn, order.Cost[ElevatorId]*3+5) // Må også endres
 				break
 
 			case Done:
