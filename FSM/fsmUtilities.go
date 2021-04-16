@@ -31,10 +31,22 @@ func queueSearch(QueueDirection elevio.MotorDirection, elevator Elevator) int {
 	if QueueDirection == elevio.MD_Stop{
 		QueueDirection = elevio.MD_Up
 	}
+	
 
-	//fmt.Println(" ---- QUEUESEARCH, MY DIRECTION IS: ", QueueDirection);
-	//fmt.Println(" ---- QUEUESEARCH, MY CUREENT FLOOR IS: ", elevator.CurrentFloor);
+	fmt.Println(" ---- QUEUESEARCH, MY DIRECTION IS: ", QueueDirection);
+	fmt.Println(" ---- QUEUESEARCH, MY CUREENT FLOOR IS: ", elevator.CurrentFloor);
 
+	/*
+	fmt.Println("Upqueue:: ")
+	for i:=0;i<NumFloors;i++{
+		fmt.Println(elevator.UpQueue[i])
+	}
+	fmt.Println("Downqueue: ")
+	for i:=0;i<NumFloors;i++{
+	fmt.Println(elevator.DownQueue[i])
+	}
+    */
+	
 	if QueueDirection == elevio.MD_Up {
 		for floor := elevator.CurrentFloor; floor < NumFloors; floor++ {
 			if elevator.UpQueue[floor] == 1 {

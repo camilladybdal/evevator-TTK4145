@@ -79,7 +79,7 @@ func pollOrders(orderIn chan Order) {
 				newOrder.Cost[elevatorNumber] = MaxCost
 			}
 
-			newOrder.Status = 1
+			newOrder.Status = WaitingForCost
 			newOrder.TimedOut = false
 			go orderBuffer(newOrder, orderIn)
 		}
