@@ -2,7 +2,7 @@ package main
 
 import (
 
-	. "./fsm"
+	. "./FSM"
 	//"./timer"
 	"./elevio"
 	. "./orderDistributor"
@@ -35,9 +35,8 @@ func main() {
 	getElevatorState := make(chan Elevator)
 
 
-	elevio.Init("localhost:15657", NumberOfFloors)
+	elevio.Init(ElevatorAddress, NumberOfFloors)
 	InitFSM(NumberOfFloors)
-	//elevio.Init("10.0.0.5:15658", 4)
 
 	go OrderDistributor(fsmChannels.NewOrder, orderUpdate, getElevatorState)
 	go RunElevator(fsmChannels, orderUpdate, getElevatorState)

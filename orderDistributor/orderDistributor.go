@@ -22,7 +22,7 @@ func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork cha
 	for {
 		select {
 		case order := <-orderToNetwork:
-			fmt.Println("Order sent to network")
+			fmt.Println("*** order sent to network: \t", order.Floor)
 			
 			redundancy := 2
 			for redundancy > 0 {
@@ -33,7 +33,7 @@ func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork cha
 			//networkTransmit <- order
 
 		case order := <-networkRecieve:
-			fmt.Println("Order recv from network")
+			fmt.Println("*** order recv from network: \t", order.Floor)
 			go orderBuffer(order, orderFromNetwork)
 		}
 	}
@@ -48,12 +48,12 @@ func orderTimer(order Order, timedOut chan<- Order, duration int) {
 		duration--
 	}
 	order.TimedOut = true
-	fmt.Println("Order timer expired")
+	fmt.Println("*** order timer expired: \t", order.Floor)
 	timedOut <- order
 }
 
 func orderBuffer(order Order, orderIn chan<- Order) {
-	fmt.Println("Order in buffer, F: ", order.Floor)
+	//fmt.Println("Order in buffer, F: ", order.Floor)
 	orderIn <- order
 }
 
@@ -64,10 +64,9 @@ func pollOrders(orderIn chan Order) {
 	for {
 		select {
 		case buttonEvent := <-newButtonEvent:
-			fmt.Println("newButtonEvent")
 			var newOrder Order
 			newOrder.Floor = buttonEvent.Floor
-			fmt.Println("Button pressed, F: ", newOrder.Floor)
+			fmt.Println("*** BUTTON pressed: \t", newOrder.Floor)
 			buttonType := buttonEvent.Button
 			newOrder.DirectionUp = (buttonType == elevio.BT_HallUp)
 			newOrder.DirectionDown = (buttonType == elevio.BT_HallDown)
@@ -87,17 +86,21 @@ func pollOrders(orderIn chan Order) {
 func orderFindIdWithLowestCost(order Order) (int) {
 	lowestCostId := ElevatorId
 	for elevator := 0; elevator < NumberOfElevators; elevator++ {
-		if order.Cost[elevator] < order.Cost[lowestCostId] {
-			lowestCostId = elevator
-		} 
+		if 10*order.Cost[elevator]+elevator < 10*order.Cost[lowestCostId]+lowestCostId {
+			lowestCostId = elevator //Tenk mer må dette etterpå
+		}
 	}
-	fmt.Println("Lowest cost id: ", lowestCostId)
+	if order.Cost[lowestCostId] == MaxCost {
+		lowestCostId = ElevatorId
+		fmt.Println("** all elevators MAXCOST: \t", order.Floor)
+	}
+	fmt.Println("*** lowest cost id: ", lowestCostId, " floor: \t", order.Floor)
 	return lowestCostId
 }
 
 
 func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorState <-chan Elevator) {
-	fmt.Println("Starting OrderDistributor...")
+	fmt.Println("*** Starting OrderDistributor...")
 	var queue [NumberOfFloors]Order
 	go pollOrders(orderIn)
 	orderToNetworkChannel := make(chan Order)
@@ -121,16 +124,16 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 		select {
 		// Order pipeline
 		case order := <-orderIn:
-			fmt.Println("Reading order...")
+			fmt.Println("*** reading order...")
 			if queue[order.Floor].Status == NoActiveOrder && order.TimedOut {
-				fmt.Println("Order early break señor, F: ", order.Floor)
+				fmt.Println("*** expired order invalid: \t", order.Floor)
 				break
 			}
 
 			switch order.Status {
 			case NoActiveOrder:
 			case WaitingForCost:
-				fmt.Println("Status is Waiting for cost, F: ", order.Floor)
+				fmt.Println("*** STATUS waiting for cost: \t", order.Floor)
 
 				if order.CabOrder == true {
 					order.Cost[ElevatorId] = Costfunction(elevatorState, order) // Bruk costfunction
@@ -144,7 +147,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					break
 				}
 				if queue[order.Floor].Status > WaitingForCost {
-					fmt.Println("Already higher status than Waiting for cost, F:", order.Floor)
+					fmt.Println("*** at higher status: \t", order.Floor)
 					break
 				}
 				queue[order.Floor].Status = order.Status
@@ -161,7 +164,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					}
 				}
 				if queue[order.Floor].Cost[ElevatorId] == MaxCost {
-					fmt.Println("Adding own cost")
+					fmt.Println("*** adding own cost: \t", order.Floor)
 					queue[order.Floor].Cost[ElevatorId] = Costfunction(elevatorState, order)
 					orderToNetworkChannel <- queue[order.Floor]
 					go orderTimer(order, orderIn, 1)
@@ -175,7 +178,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 
 				if allCostsPresent || order.TimedOut {
-					fmt.Println("WFC ACP or order TO")
+					//fmt.Println("*** order with status WFC advances: \t", order.Floor)
 					queue[order.Floor].Status = Unconfirmed
 					go orderBuffer(queue[order.Floor], orderIn)
 					orderToNetworkChannel <- queue[order.Floor]
@@ -183,9 +186,9 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				break
 
 			case Unconfirmed:
-				fmt.Println("Status is Unconfirmed, F: ", order.Floor)
+				fmt.Println("*** STATUS Unconfirmed: \t", order.Floor)
 				if queue[order.Floor].Status > Unconfirmed {
-					fmt.Println("Already higher status than Unconfirmed, F: ", order.Floor)
+					fmt.Println("*** at higher status: \t", order.Floor)
 					break
 				}
 				if order.TimedOut == true {
@@ -194,7 +197,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 
 				if orderFindIdWithLowestCost(order) == ElevatorId {
-					fmt.Println("Has lowest cost")
+					fmt.Println("*** has LOWESTCOST: \t", order.Floor)
 					queue[order.Floor].Status = Confirmed
 					orderToNetworkChannel <- queue[order.Floor]
 					queue[order.Floor].Status = Mine
@@ -213,13 +216,16 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, true)
 				}
 
-				fmt.Println("Status is Confirmed, F: ", order.Floor)
+				fmt.Println("*** STATUS Confirmed: \t", order.Floor)
 				if queue[order.Floor].Status > Confirmed {
-					fmt.Println("Already higher status than Confirmed, F: ", order.Floor)
+					fmt.Println("*** at higher status: \t", order.Floor)
 					break
 				}
 
 				if order.TimedOut == true {
+					if order.CabOrder == true {
+						break // Må utbedres
+					}
 					queue[order.Floor].Status = Unconfirmed
 					order.Status = Unconfirmed
 					go orderBuffer(order, orderIn)
@@ -231,31 +237,31 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				break // Hva skjer hvis alle har MaxCost?
 
 			case Mine:
-				fmt.Println("Status is Mine, F: ", order.Floor)
+				fmt.Println("*** STATUS Mine: \t", order.Floor)
 				if queue[order.Floor].Status > Mine {
-					fmt.Println("Order with status Mine cancelled, F: ", order.Floor)
+					fmt.Println("*** order with status Mine CANCELLED: \t", order.Floor)
 					break
 				}
 
 				if order.TimedOut == true && order.CabOrder == false {
-					fmt.Println("Order with status Mine has Timed out, F:", order.Floor)
+					fmt.Println("** order with status Mine TIMEDOUT: \t", order.Floor)
 					order.Status = Confirmed
 					queue[order.Floor].Status = Confirmed
 					orderToNetworkChannel <- order
 					break
 				} else if order.TimedOut == true {
-					fmt.Println("Error: Could not expedite Caborder!!")
+					fmt.Println("*** ERROR: Could not expedite Caborder: \r", order.Floor)
 					break
 				}
 
 				// send til fsm
 				orderOut <- queue[order.Floor]
-				fmt.Println("Order sent to FSM, F: ", order.Floor)
+				fmt.Println("*** ORDER SENT TO FSM: \t", order.Floor)
 				go orderTimer(order, orderIn, order.Cost[ElevatorId]*2) // Må også endres
 				break
 
 			case Done:
-				fmt.Println("Status is Done, F: ", order.Floor)
+				fmt.Println("****** ORDER DONE: \t", order.Floor)
 				order.Status = NoActiveOrder
 				order.DirectionUp = false
 				order.DirectionDown = false
