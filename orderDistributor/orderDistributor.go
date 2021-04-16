@@ -275,7 +275,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 			case Done:
 				fmt.Println("****** ORDER DONE: \t", order.Floor)
-				if Done.FromId == ElevatorId {
+				if order.FromId == ElevatorId {
 					orderToNetworkChannel <- order
 				}
 				elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, false)
