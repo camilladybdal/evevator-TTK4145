@@ -187,7 +187,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					}
 
 				*/
-				
+
 				if nextFloor == floorArrival{
 
 					elevio.SetMotorDirection(elevio.MD_Stop)
@@ -206,7 +206,8 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					//send a completed order message to OrderDistributed
 					var Expidized_order Order
 					Expidized_order.Floor = floorArrival
-					Expidized_order.Status = 5 //replace with Done
+					Expidized_order.Status = Done //replace with Done
+					Expidized_order.FromId = ElevatorId
 					OrderUpdate <- Expidized_order
 
 					//starte door-timer
@@ -236,6 +237,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					var Expidized_order Order
 					Expidized_order.Floor = floorArrival
 					Expidized_order.Status = Done 
+					Expidized_order.FromId = ElevatorId
 					OrderUpdate <- Expidized_order
 
 					elevio.SetDoorOpenLamp(true)					
