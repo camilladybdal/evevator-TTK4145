@@ -23,6 +23,7 @@ func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork cha
 		select {
 		case order := <-orderToNetwork:
 			fmt.Println("*** order sent to network: \t", order.Floor)
+			order.FromId = ElevatorId
 			
 			redundancy := 2
 			for redundancy > 0 {
@@ -141,12 +142,18 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 			case WaitingForCost:
 				fmt.Println("*** STATUS waiting for cost: \t", order.Floor)
 
+				if queue[order.Floor].CabOrder == true {
+					order.Cost[ElevatorId] = queue[order.Floor].Cost[ElevatorId]
+					orderToNetwork <- order
+					break
+				}
+
 				if order.CabOrder == true {
 					order.Cost[ElevatorId] = Costfunction(elevatorState, order) // Bruk costfunction
-					order.Status = Confirmed
-					order.CabOrder = false
-					orderToNetworkChannel <- order
-					order.CabOrder = true
+					//order.Status = Confirmed
+					//order.CabOrder = false
+					//orderToNetworkChannel <- order
+					//order.CabOrder = true
 					order.Status = Mine
 					queue[order.Floor] = order
 					go orderBuffer(order, orderIn)
@@ -228,7 +235,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					break
 				}
 
-				if order.TimedOut == true {
+				if order.TimedOut == true && queue[order.Floor].Status == Confirmed {
 					if order.CabOrder == true {
 						break // Må utbedres
 					}
@@ -239,7 +246,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 
 				queue[order.Floor] = order
-				go orderTimer(order, orderIn, order.Cost[orderFindIdWithLowestCost(order)]*2) // Må endres til et uttrykk med costen
+				go orderTimer(order, orderIn, order.Cost[orderFindIdWithLowestCost(order)]*3+5) // Må endres til et uttrykk med costen
 				break // Hva skjer hvis alle har MaxCost?
 
 			case Mine:
