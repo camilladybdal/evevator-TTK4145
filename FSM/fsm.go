@@ -5,6 +5,7 @@ import (
 	"fmt"
 	. "../types"
 	. "../timer"
+	. "../config"
 	//"time"
 )
 
