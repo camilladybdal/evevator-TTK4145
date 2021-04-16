@@ -21,7 +21,7 @@ func InitFSM(numFloors int) {
 
 	elevio.SetDoorOpenLamp(false)
 
-	fmt.Println("FSM Initialized")
+	fmt.Println("FSM Initialized ")
 }
 
 func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<- Elevator) {
@@ -162,7 +162,6 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 
 		case floorArrival := <- channels.FloorReached:
-			fmt.Println("---- I am heding for this floor: ", nextFloor)
 			fmt.Println("---- Arriving at floor: ", floorArrival)
 
 			elevatorInfo.CurrentFloor = floorArrival
@@ -172,6 +171,23 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 			case IDLE:
 			case MOVING:
 
+				nextFloor = queueSearch(QueueDirection, elevatorInfo)
+				fmt.Println("---- I am heding for this floor: ", nextFloor)
+
+				/*
+				fmt.Println("---- My queue after adding the new order to it is: ")
+
+					fmt.Println("Upqueue:: ")
+					for i:=0;i<NumFloors;i++{
+						fmt.Println(elevatorInfo.UpQueue[i])
+					}
+					fmt.Println("Downqueue: ")
+					for i:=0;i<NumFloors;i++{
+						fmt.Println(elevatorInfo.DownQueue[i])
+					}
+
+				*/
+				
 				if nextFloor == floorArrival{
 
 					elevio.SetMotorDirection(elevio.MD_Stop)
