@@ -144,7 +144,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 				if queue[order.Floor].CabOrder == true {
 					order.Cost[ElevatorId] = queue[order.Floor].Cost[ElevatorId]
-					orderToNetwork <- order
+					orderToNetworkChannel <- order
 					break
 				}
 
@@ -275,6 +275,9 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 			case Done:
 				fmt.Println("****** ORDER DONE: \t", order.Floor)
+				if Done.FromId == ElevatorId {
+					orderToNetworkChannel <- order
+				}
 				elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, false)
 				elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, false)
 				order.Status = NoActiveOrder
@@ -286,7 +289,6 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					order.Cost[elevatorNumber] = MaxCost
 				}
 				queue[order.Floor] = order
-				orderToNetworkChannel <- order
 				break
 			}
 
