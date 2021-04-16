@@ -82,11 +82,13 @@ func pollOrders(orderIn chan Order) {
 
 			for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
 				newOrder.Cost[elevatorNumber] = MaxCost
+				fmt.Println("kommer hit 1")
 			}
 
 			newOrder.Status = WaitingForCost
 			newOrder.TimedOut = false
 			go orderBuffer(newOrder, orderIn)
+			fmt.Println("kommer hit 2")
 		}
 	}
 }
@@ -107,10 +109,7 @@ func orderFindIdWithLowestCost(order Order) (int) {
 	return lowestCostId
 }
 
-func orderDumpQueue(queue *[]Order) {
-	
-
-}
+//func orderDumpQueue(queue *[]Order) {}
 
 
 func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorState <-chan Elevator) {
