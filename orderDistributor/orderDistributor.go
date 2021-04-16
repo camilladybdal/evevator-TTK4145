@@ -113,7 +113,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 	for floor := 0; floor < NumberOfFloors; floor++ {
 		queue[floor].Floor = floor
 		queue[floor].DirectionUp = false
-		queue[floor].DirectionDown = true
+		queue[floor].DirectionDown = false
 		queue[floor].CabOrder = false
 		for elevator := 0; elevator < NumberOfElevators; elevator++ {
 			queue[floor].Cost[elevator] = MaxCost
