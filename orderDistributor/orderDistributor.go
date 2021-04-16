@@ -25,16 +25,17 @@ func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork cha
 			fmt.Println("*** order sent to network: \t", order.Floor)
 			order.FromId = ElevatorId
 			
-			redundancy := 2
+			redundancy := 4
 			for redundancy > 0 {
 				networkTransmit <- order
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(100 * time.Millisecond)
 				redundancy--
 			}
 			//networkTransmit <- order
 
 		case order := <-networkRecieve:
 			if order.FromId == ElevatorId {
+				fmt.Println("*** read own order from network")
 				break
 			}
 			fmt.Println("*** order recv from network: \t", order.Floor)
@@ -180,11 +181,15 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					fmt.Println("*** adding own cost: \t", order.Floor)
 					queue[order.Floor].Cost[ElevatorId] = Costfunction(elevatorState, order)
 					orderToNetworkChannel <- queue[order.Floor]
-					go orderTimer(order, orderIn, 1)
+					fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+					go orderTimer(order, orderIn, 2)
+					fmt.Println("-----------------------------------")
 				}
 
 				allCostsPresent := true
+				fmt.Println("*** costcheck: \t", order.Floor)
 				for elevator := 0; elevator < NumberOfElevators; elevator++ {
+					fmt.Println(queue[order.Floor].Cost[elevator])
 					if queue[order.Floor].Cost[elevator] == MaxCost {
 						allCostsPresent = false
 					}
@@ -216,7 +221,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					queue[order.Floor].Status = Mine
 					go orderBuffer(queue[order.Floor], orderIn)
 				} else {
-					go orderTimer(queue[order.Floor], orderIn, queue[order.Floor].Cost[orderFindIdWithLowestCost(order)*3+5])
+					go orderTimer(queue[order.Floor], orderIn, queue[order.Floor].Cost[orderFindIdWithLowestCost(order)]*3+5)
 				}
 				break
 
