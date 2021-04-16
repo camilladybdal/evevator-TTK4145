@@ -38,7 +38,7 @@ func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork cha
 
 		case order := <-networkRecieve:
 			if order.FromId == ElevatorId {
-				fmt.Println("*** read own order from network")
+				//fmt.Println("*** read own order from network")
 				break
 			}
 			fmt.Println("*** order recv from network: \t", order.Floor)
@@ -63,6 +63,7 @@ func orderTimer(order Order, timedOut chan<- Order, duration int) {
 func orderBuffer(order Order, orderIn chan<- Order) {
 	//fmt.Println("Order in buffer, F: ", order.Floor)
 	orderIn <- order
+	return
 }
 
 func pollOrders(orderIn chan Order) {
@@ -107,11 +108,14 @@ func orderFindIdWithLowestCost(order Order) (int) {
 	return lowestCostId
 }
 
+
+/*
 func orderDumpQueue(queue *[]Order) {
-	
+	for floor := 0; floor < NumberOfFloors; floor++ {
 
+	}
 }
-
+*/
 
 func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorState <-chan Elevator) {
 	fmt.Println("*** Starting OrderDistributor...")
@@ -153,6 +157,12 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 				if queue[order.Floor].CabOrder == true {
 					order.Cost[ElevatorId] = queue[order.Floor].Cost[ElevatorId]
+					if order.DirectionUp {
+						elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, order.DirectionUp)
+					}
+					if order.DirectionDown {
+						elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, order.DirectionDown)
+					}
 					orderToNetworkChannel <- order
 					break
 				}
@@ -163,6 +173,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					//order.CabOrder = false
 					//orderToNetworkChannel <- order
 					//order.CabOrder = true
+					elevio.SetButtonLamp(elevio.BT_Cab, order.Floor, true)
 					order.Status = Mine
 					queue[order.Floor] = order
 					go orderBuffer(order, orderIn)
@@ -293,6 +304,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 				elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, false)
 				elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, false)
+				elevio.SetButtonLamp(elevio.BT_Cab, order.Floor, false)
 				order.Status = NoActiveOrder
 				order.DirectionUp = false
 				order.DirectionDown = false
