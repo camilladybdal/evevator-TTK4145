@@ -11,6 +11,15 @@ import (
 	. "../costfnc"
 )
 
+func orderNetworkResending(order Order, orderToNetwork chan<- Order) {
+	redundancy := 3
+	for redundancy > 0 {
+		orderToNetwork <- order
+		time.Sleep(100 * time.Millisecond)
+		redundancy--
+	}
+}
+
 func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork chan<- Order) {
 	port := Port
 	networkTransmit := make(chan Order)
@@ -25,13 +34,7 @@ func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork cha
 			fmt.Println("*** order sent to network: \t", order.Floor)
 			order.FromId = ElevatorId
 			
-			redundancy := 4
-			for redundancy > 0 {
-				networkTransmit <- order
-				time.Sleep(100 * time.Millisecond)
-				redundancy--
-			}
-			//networkTransmit <- order
+			go orderNetworkResending(order, networkTransmit)
 
 		case order := <-networkRecieve:
 			if order.FromId == ElevatorId {
@@ -102,6 +105,11 @@ func orderFindIdWithLowestCost(order Order) (int) {
 	}
 	fmt.Println("*** lowest cost id: ", lowestCostId, " floor: \t", order.Floor)
 	return lowestCostId
+}
+
+func orderDumpQueue(queue *[]Order) {
+	
+
 }
 
 
