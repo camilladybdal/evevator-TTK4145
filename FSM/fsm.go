@@ -10,21 +10,6 @@ import (
 	. "../types"
 )
 
-// ------------------------------------------------------------------------------------------------------------------------------------------------------
-// Global functions
-// ------------------------------------------------------------------------------------------------------------------------------------------------------
-
-func InitFSM(numFloors int) {
-	elevio.SetMotorDirection(elevio.MD_Down)
-	for elevio.GetFloor() != 0 {
-	}
-	elevio.SetMotorDirection(elevio.MD_Stop)
-	elevio.SetFloorIndicator(0)
-
-	elevio.SetDoorOpenLamp(false)
-	fmt.Println("FSM Initialized ")
-}
-
 func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<- Elevator) {
 	State := IDLE
 	var elevatorInfo Elevator
@@ -44,10 +29,10 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 	var nextFloor int
 	var obstructed bool
-	var immobilityNextFloor int
 
 	//read cab-orders from file and add to queues.
 	readFromBackupFile("CabOrders", ElevatorId, &elevatorInfo)
+	startupAfterCrash := checkOrdersPresent(elevatorInfo)
 
 	go elevio.PollFloorSensor(channels.FloorReached)
 	go elevio.PollObstructionSwitch(channels.Obstruction)
@@ -67,12 +52,9 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 					elevio.SetDoorOpenLamp(true)
 					resetDoor <- DOOR_OPEN_TIMER
-
 					fmt.Println("---- Started Doortimer")
 
-					newOrder.Status = Done
-					newOrder.FromId = ElevatorId
-					OrderUpdate <- newOrder
+					expidizeOrder(elevatorInfo, OrderUpdate)
 
 					State = DOOROPEN
 
@@ -80,21 +62,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 					//legger til i køen
 					addToQueue(&elevatorInfo, newOrder)
-
-					//Søker etter floor HVIS den er i IDLE
-					nextFloor = queueSearch(QueueDirection, elevatorInfo)
-					fmt.Println("---- floor im heading for is: ", nextFloor)
-
-					dir := getDirection(elevatorInfo.CurrentFloor, nextFloor)
-					elevio.SetMotorDirection(dir)
-					QueueDirection = dir
-					elevatorInfo.Direction = dir
-
-					fmt.Println("---- direction to floor is: ", dir)
-
-					//Start Motortimer
-					go StoppableTimer(MAX_TRAVEL_TIME, 1, channels.StopImmobileTimer, channels.Immobile)
-					fmt.Println("---- Started motortimer")
+					goToNextInQueue(channels, elevatorInfo, QueueDirection)
 					State = MOVING
 
 					//update elev-info
@@ -125,16 +93,10 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					fmt.Println(" ---- Started Doortimer")
 					removeFromQueue(&elevatorInfo)
 
-					//send a completed order message to OrderDistributed
-					newOrder.Status = Done
-					newOrder.FromId = ElevatorId
-					OrderUpdate <- newOrder
+					expidizeOrder(elevatorInfo, OrderUpdate)
 
 				} else {
-					//legger til i køen
 					addToQueue(&elevatorInfo, newOrder)
-
-					//update elev-info
 					updateFileAndElevator = true
 
 				}
@@ -154,11 +116,6 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				nextFloor = queueSearch(QueueDirection, elevatorInfo)
 				fmt.Println("---- I am heding for this floor: ", nextFloor)
 
-				//hvis den kommer her og har -1 har den vært immobil ?
-				if nextFloor == -1 {
-					nextFloor = immobilityNextFloor
-				}
-
 				if nextFloor == floorArrival {
 
 					elevio.SetMotorDirection(elevio.MD_Stop)
@@ -168,21 +125,14 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					channels.StopImmobileTimer <- true
 					fmt.Println("---- Stopped Motortimer")
 
-					//open door
 					elevio.SetDoorOpenLamp(true)
 					removeFromQueue(&elevatorInfo)
-
-					//send a completed order message to OrderDistributed
 					expidizeOrder(elevatorInfo, OrderUpdate)
 
-					//if caborder: skriv null til fil.
-
-					//starte door-timer
 					resetDoor <- DOOR_OPEN_TIMER
 					fmt.Println("---- Started doortimer")
 					State = DOOROPEN
 
-					//update elev-info
 					updateFileAndElevator = true
 
 				} else {
@@ -234,7 +184,6 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					fmt.Println("---- Restarted doortimer")
 
 					if wasobstr == false {
-						//starte obstruction timer  første gangen den er obsruert
 						fmt.Println("---- started obstruction/immobility timer")
 						go StoppableTimer(MAX_OBSTRUCTION_TIME, 1, channels.StopImmobileTimer, channels.Immobile)
 						wasobstr = true
@@ -249,16 +198,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 				if checkOrdersPresent(elevatorInfo) == true && obstructed == false {
 					elevio.SetDoorOpenLamp(false)
-					nextFloor = queueSearch(QueueDirection, elevatorInfo)
-
-					dir := getDirection(elevatorInfo.CurrentFloor, nextFloor)
-					elevio.SetMotorDirection(dir)
-					QueueDirection = dir
-					elevatorInfo.Direction = dir
-
-					//start motor-timer
-					go StoppableTimer(MAX_TRAVEL_TIME, 1, channels.StopImmobileTimer, channels.Immobile)
-					fmt.Println("---- Started motortimer")
+					goToNextInQueue(channels, elevatorInfo, QueueDirection)
 					State = MOVING
 				} else {
 					if obstructed == false && checkOrdersPresent(elevatorInfo) == false {
@@ -277,7 +217,6 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					fmt.Println("---- Restarted doortimer")
 				}
 				updateFileAndElevator = true
-
 			}
 
 		case obstructed = <-channels.Obstruction:
@@ -299,20 +238,21 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 			channels.StopImmobileTimer <- true
 			elevatorInfo.Immobile = true
-			immobilityNextFloor = nextFloor
 			State = IMMOBILE
 			updateFileAndElevator = true
 
 		default:
+			if startupAfterCrash == true {
+				startupAfterCrash = false
+				goToNextInQueue(channels, elevatorInfo, QueueDirection)
+				State = MOVING
+			}
 		}
 		if updateFileAndElevator == true {
 			updateFileAndElevator = false
 
 			writeToBackUpFile("CabOrders", ElevatorId, elevatorInfo)
 			go func() { ElevState <- elevatorInfo }()
-
 		}
-
 	}
-
 }

@@ -8,8 +8,34 @@ import (
 
 	. "../config"
 	"../elevio"
+	. "../timer"
 	. "../types"
 )
+
+func InitFSM(numFloors int) {
+	elevio.SetMotorDirection(elevio.MD_Down)
+	for elevio.GetFloor() != 0 {
+	}
+	elevio.SetMotorDirection(elevio.MD_Stop)
+	elevio.SetFloorIndicator(0)
+
+	elevio.SetDoorOpenLamp(false)
+	fmt.Println("FSM Initialized ")
+}
+
+func goToNextInQueue(channels FsmChannels, elevatorInfo Elevator, QueueDirection elevio.MotorDirection) {
+	nextFloor := queueSearch(QueueDirection, elevatorInfo)
+	fmt.Println("---- floor im heading for is: ", nextFloor)
+
+	dir := getDirection(elevatorInfo.CurrentFloor, nextFloor)
+	elevio.SetMotorDirection(dir)
+	QueueDirection = dir
+	elevatorInfo.Direction = dir
+
+	//Start Motortimer
+	go StoppableTimer(MAX_TRAVEL_TIME, 1, channels.StopImmobileTimer, channels.Immobile)
+	fmt.Println("---- Started motortimer")
+}
 
 func addToQueue(elevatorInfo *Elevator, newOrder Order) {
 	if newOrder.DirectionUp == true || newOrder.CabOrder == true {
