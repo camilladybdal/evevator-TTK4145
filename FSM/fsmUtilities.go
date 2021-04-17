@@ -3,9 +3,17 @@ package fsm
 import (
 	"../elevio"
 	. "../types"
-	. "../config.go"
+	. "../config"
 	"fmt"
 )
+
+func expidizeOrder(elevator Elevator, OrderUpdate chan<- Order){
+	var Expidized_order Order
+	Expidized_order.Floor = elevator.CurrentFloor 
+	Expidized_order.Status = Done 
+	Expidized_order.FromId = ElevatorId
+	OrderUpdate <- Expidized_order
+}
 
 func getDirection(currentFloor int, destinationFloor int) elevio.MotorDirection {
 	if currentFloor-destinationFloor > 0 {
@@ -28,26 +36,13 @@ func checkOrdersPresent(elevator Elevator) bool{
 func queueSearch(QueueDirection elevio.MotorDirection, elevator Elevator) int {
 	nextFloor := -1
 
-	//first times
 	if QueueDirection == elevio.MD_Stop{
 		QueueDirection = elevio.MD_Up
 	}
 	
-
 	fmt.Println(" ---- QUEUESEARCH, MY DIRECTION IS: ", QueueDirection);
 	fmt.Println(" ---- QUEUESEARCH, MY CUREENT FLOOR IS: ", elevator.CurrentFloor);
 
-	/*
-	fmt.Println("Upqueue:: ")
-	for i:=0;i<NumberOfFloors;i++{
-		fmt.Println(elevator.UpQueue[i])
-	}
-	fmt.Println("Downqueue: ")
-	for i:=0;i<NumberOfFloors;i++{
-	fmt.Println(elevator.DownQueue[i])
-	}
-    */
-	
 	if QueueDirection == elevio.MD_Up {
 		for floor := elevator.CurrentFloor; floor < NumberOfFloors; floor++ {
 			if elevator.UpQueue[floor] == 1 {
@@ -105,3 +100,4 @@ func emptyQueue(elevator *Elevator){
 		elevator.DownQueue[floor] = 0
 	}
 }
+

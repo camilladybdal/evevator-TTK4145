@@ -2,7 +2,6 @@ package types
 
 
 import (
-	"time"
 	"../elevio"
    . "../config"
 )
@@ -41,8 +40,8 @@ type Order struct {
 }
 
 type Elevator struct {
-	UpQueue      [NumFloors]int
-	DownQueue    [NumFloors]int
+	UpQueue      [NumberOfFloors ]int
+	DownQueue    [NumberOfFloors ]int
 	CurrentFloor int
 	Direction    elevio.MotorDirection
 	Immobile    bool

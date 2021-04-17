@@ -3,7 +3,6 @@ package main
 import (
 
 	. "./FSM"
-	//"./timer"
 	"./elevio"
 	. "./orderDistributor"
 	. "./types"
@@ -43,7 +42,7 @@ func main() {
 
 
 	for {}
-
+   
 }
 
 
