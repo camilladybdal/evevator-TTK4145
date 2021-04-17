@@ -7,13 +7,6 @@ import (
    . "../config"
 )
 
-const (
-	NumFloors   	 	int = 4
-	DOOROPENTIME 	 	time.Duration = 3
-	PASSINGFLOORTIME 	time.Duration = 4
-	MAXOBSTRUCTIONTIME  time.Duration = 9 //?
-)
-
 type State int
 
 const (
@@ -22,17 +15,6 @@ const (
 	DOOROPEN       = 2
 	IMMOBILE      = 3
 )
-
-/*
-type Direction int
-const (
-	Up 	  Direction = 1
-	Down 			= -1
-	Stop			= 0
-)
-*/
-
-// Constants
 
 type Status int
 
@@ -57,8 +39,6 @@ type Order struct {
 	TimedOut      bool   // Time? or Id?
 	FromId		  int
 }
-
-
 
 type Elevator struct {
 	UpQueue      [NumFloors]int

@@ -57,7 +57,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				if elevatorInfo.CurrentFloor == newOrder.Floor{
 
 					elevio.SetDoorOpenLamp(true)
-					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut) 
+					go CountDownTimer(DOOR_OPEN_TIMER, channels.DoorTimedOut) 
 					fmt.Println("---- Started Doortimer")
 
 					newOrder.Status = Done 
@@ -82,11 +82,11 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					fmt.Println("---- My queue after adding the new order to it is: ")
 
 					fmt.Println("Upqueue:: ")
-					for i:=0;i<NumFloors;i++{
+					for i:=0;i<NumberOfFloors;i++{
 						fmt.Println(elevatorInfo.UpQueue[i])
 					}
 					fmt.Println("Downqueue: ")
-					for i:=0;i<NumFloors;i++{
+					for i:=0;i<NumberOfFloors;i++{
 					fmt.Println(elevatorInfo.DownQueue[i])
 					}
 					*/
@@ -108,7 +108,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 					
 					//Start for motor!!
-					go StoppableTimer(PASSINGFLOORTIME, 1, channels.StopImmobileTimer, channels.Immobile)
+					go StoppableTimer(, 1, channels.StopImmobileTimer, channels.Immobile)
 					fmt.Println("---- Started motortimer")
 					State = MOVING
 
@@ -138,7 +138,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				if elevatorInfo.CurrentFloor == newOrder.Floor{
 
 					elevio.SetDoorOpenLamp(true)
-					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut) 
+					go CountDownTimer(DOOR_OPEN_TIMER, channels.DoorTimedOut) 
 					fmt.Println(" ---- Started Doortimer")
 					removeFromQueue(&elevatorInfo)
 
@@ -204,7 +204,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					OrderUpdate <- Expidized_order
 
 					//starte door-timer
-					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut)
+					go CountDownTimer(DOOR_OPEN_TIMER, channels.DoorTimedOut)
 					fmt.Println("---- Started doortimer")
 					State = DOOROPEN
 
@@ -213,7 +213,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				} else {
 					//Restart motorTimer
 					channels.StopImmobileTimer <- true
-					go StoppableTimer(PASSINGFLOORTIME, 1, channels.StopImmobileTimer, channels.Immobile)
+					go StoppableTimer(, 1, channels.StopImmobileTimer, channels.Immobile)
 					fmt.Println("---- Restarted Motortimer")
 				}
 			case DOOROPEN:
@@ -236,13 +236,13 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					elevio.SetDoorOpenLamp(true)					
 					removeFromQueue(&elevatorInfo)
 
-					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut)
+					go CountDownTimer(DOOR_OPEN_TIMER, channels.DoorTimedOut)
 					fmt.Println("---- Started doortimer")
 					State = DOOROPEN
 
 				} else {
 
-					go StoppableTimer(PASSINGFLOORTIME, 1, channels.StopImmobileTimer, channels.Immobile)
+					go StoppableTimer(, 1, channels.StopImmobileTimer, channels.Immobile)
 					fmt.Println("---- Started motortimer")
 					State = MOVING
 
@@ -269,13 +269,13 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				if obstructed == true{
 					fmt.Println("---- OBSTRUCTION")
 
-					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut)
+					go CountDownTimer(DOOR_OPEN_TIMER, channels.DoorTimedOut)
 					fmt.Println("---- Restarted doortimer")
 
 					if wasobstr == false {
 					//starte obstruction timer  første gangen den er obsruert
 					fmt.Println("---- started obstruction/immobility timer")
-					go StoppableTimer(MAXOBSTRUCTIONTIME, 1, channels.StopImmobileTimer, channels.Immobile)
+					go StoppableTimer(MAX_OBSTRUCTION_TIME, 1, channels.StopImmobileTimer, channels.Immobile)
 					wasobstr = true 
 					}
 
@@ -304,7 +304,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					elevatorInfo.Direction = dir
 
 					//start motor-timer
-					go StoppableTimer(PASSINGFLOORTIME, 1, channels.StopImmobileTimer, channels.Immobile)
+					go StoppableTimer(, 1, channels.StopImmobileTimer, channels.Immobile)
 					fmt.Println("---- Started motortimer")
 					State = MOVING
 
@@ -326,7 +326,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				if obstructed == false {
 					State = DOOROPEN
 					elevatorInfo.Immobile = false
-					go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut)
+					go CountDownTimer(DOOR_OPEN_TIMER , channels.DoorTimedOut)
 					fmt.Println("---- Restarted doortimer")
 
 				}
@@ -347,7 +347,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					/*Dette er hvis den er immobil, og dør-timeren ikke går lenger*/
 					if State == IMMOBILE{
 						State = DOOROPEN
-						go CountDownTimer(DOOROPENTIME, channels.DoorTimedOut)
+						go CountDownTimer(DOOR_OPEN_TIMER, channels.DoorTimedOut)
 						fmt.Println("---- Restarted doortimer, no longer obstructed")
 					}
 				}
@@ -369,10 +369,10 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 			immobilityNextFloor = nextFloor
 
-			for i:=0;i<NumFloors;i++{
+			for i:=0;i<NumberOfFloors;i++{
 				fmt.Println(elevatorInfo.UpQueue[i])
 			}
-			for i:=0;i<NumFloors;i++{
+			for i:=0;i<NumberOfFloors;i++{
 			fmt.Println(elevatorInfo.DownQueue[i])
 			}
 

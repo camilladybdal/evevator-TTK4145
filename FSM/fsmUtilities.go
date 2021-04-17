@@ -3,6 +3,7 @@ package fsm
 import (
 	"../elevio"
 	. "../types"
+	. "../config.go"
 	"fmt"
 )
 
@@ -16,7 +17,7 @@ func getDirection(currentFloor int, destinationFloor int) elevio.MotorDirection 
 
 func checkOrdersPresent(elevator Elevator) bool{
 	foundOrder := false
-	for i := 0; i < NumFloors; i++ {
+	for i := 0; i < NumberOfFloors; i++ {
 		if elevator.UpQueue[i] == 1 || elevator.DownQueue[i] == 1 {
 			foundOrder = true
 		}
@@ -38,24 +39,24 @@ func queueSearch(QueueDirection elevio.MotorDirection, elevator Elevator) int {
 
 	/*
 	fmt.Println("Upqueue:: ")
-	for i:=0;i<NumFloors;i++{
+	for i:=0;i<NumberOfFloors;i++{
 		fmt.Println(elevator.UpQueue[i])
 	}
 	fmt.Println("Downqueue: ")
-	for i:=0;i<NumFloors;i++{
+	for i:=0;i<NumberOfFloors;i++{
 	fmt.Println(elevator.DownQueue[i])
 	}
     */
 	
 	if QueueDirection == elevio.MD_Up {
-		for floor := elevator.CurrentFloor; floor < NumFloors; floor++ {
+		for floor := elevator.CurrentFloor; floor < NumberOfFloors; floor++ {
 			if elevator.UpQueue[floor] == 1 {
 				nextFloor = floor
 
 				return nextFloor
 			}
 		}
-		for floor := NumFloors - 1; floor >= 0; floor-- {
+		for floor := NumberOfFloors - 1; floor >= 0; floor-- {
 			if elevator.DownQueue[floor] == 1 {
 				nextFloor = floor
 				return nextFloor
@@ -77,13 +78,13 @@ func queueSearch(QueueDirection elevio.MotorDirection, elevator Elevator) int {
 				return nextFloor
 			}
 		}
-		for floor := 0; floor < NumFloors; floor++ {
+		for floor := 0; floor < NumberOfFloors; floor++ {
 			if elevator.UpQueue[floor] == 1 {
 				nextFloor = floor
 				return nextFloor
 			}
 		}
-		for floor := NumFloors-1; floor >= 0; floor-- {
+		for floor := NumberOfFloors-1; floor >= 0; floor-- {
 			if elevator.DownQueue[floor] == 1 {
 				nextFloor = floor
 				return nextFloor
@@ -99,7 +100,7 @@ func removeFromQueue(elevator *Elevator){
 }
 
 func emptyQueue(elevator *Elevator){
-	for floor := 0; floor < NumFloors; floor++ {
+	for floor := 0; floor < NumberOfFloors; floor++ {
 		elevator.UpQueue[floor] = 0
 		elevator.DownQueue[floor] = 0
 	}
