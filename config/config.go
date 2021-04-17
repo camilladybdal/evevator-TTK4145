@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 const (
 	Port = 16569
 

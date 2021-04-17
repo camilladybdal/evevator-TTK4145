@@ -46,7 +46,7 @@ func getMovementList(elev Elevator, neworder Order) []int {
 				movement = append(movement, i)
 			}
 		}
-		for i := 0; i < NumFloors; i++ { //Search upqueue for orders, if order in upqueue: + DOOROPENTIME + TRAVELTIME
+		for i := 0; i < NumberOfFloors; i++ { //Search upqueue for orders, if order in upqueue: + DOOROPENTIME + TRAVELTIME
 			if i == neworder.Floor && neworder.DirectionUp == true {
 				movement = append(movement, neworder.Floor)
 				return movement
@@ -55,7 +55,7 @@ func getMovementList(elev Elevator, neworder Order) []int {
 				movement = append(movement, i)
 			}
 		}
-		for i := NumFloors - 1; i < elev.CurrentFloor; i-- { //Search downqueue for orders from top to current
+		for i := NumberOfFloors - 1; i < elev.CurrentFloor; i-- { //Search downqueue for orders from top to current
 			if i == neworder.Floor && neworder.DirectionDown == true {
 				movement = append(movement, neworder.Floor)
 				return movement
@@ -65,7 +65,7 @@ func getMovementList(elev Elevator, neworder Order) []int {
 			}
 		}
 	} else if elev.Direction == MD_Up {
-		for i := elev.CurrentFloor; i < NumFloors; i++ { //Search upqueue for orders from current floor
+		for i := elev.CurrentFloor; i < NumberOfFloors; i++ { //Search upqueue for orders from current floor
 			if i == neworder.Floor && neworder.DirectionUp == true {
 				movement = append(movement, neworder.Floor)
 				return movement
@@ -74,7 +74,7 @@ func getMovementList(elev Elevator, neworder Order) []int {
 				movement = append(movement, i)
 			}
 		}
-		for i := NumFloors - 1; i >= 0; i-- { //Search downqueue for orders
+		for i := NumberOfFloors - 1; i >= 0; i-- { //Search downqueue for orders
 			if i == neworder.Floor && neworder.DirectionDown == true {
 				movement = append(movement, neworder.Floor)
 				return movement

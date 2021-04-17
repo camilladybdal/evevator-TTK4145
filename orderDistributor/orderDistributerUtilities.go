@@ -7,7 +7,7 @@ import(
 	"../elevio"
 	"../network/bcast"
 	. "../types"
-	. "../costfnc"
+	//. "../costfnc"
 )
 func orderNetworkResending(order Order, orderToNetwork chan<- Order) {
 	redundancy := 3
