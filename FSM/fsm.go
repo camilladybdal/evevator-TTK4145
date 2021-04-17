@@ -71,7 +71,8 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					
 					fmt.Println("---- Started Doortimer")
 
-					newOrder.Status = Done 
+					newOrder.Status = Done
+					newOrder.FromId = ElevatorId
 					OrderUpdate <- newOrder
 
 					State = DOOROPEN
@@ -141,7 +142,8 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					removeFromQueue(&elevatorInfo)
 
 					//send a completed order message to OrderDistributed
-					newOrder.Status = Done 
+					newOrder.Status = Done
+					newOrder.FromId = ElevatorId
 					OrderUpdate <- newOrder
 
 				} else {
