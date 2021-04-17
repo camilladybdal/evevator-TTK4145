@@ -64,6 +64,9 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				//fmt.Println("*** expired order invalid: \t", order.Floor)
 				break
 			}
+			if elevatorImmobile && order.CabOrder == false {
+				break
+			}
 			switch order.Status {
 			case NoActiveOrder:
 			case WaitingForCost:
@@ -243,6 +246,9 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 						queue[floor].Status = Confirmed
 						queue[floor].TimedOut = true
 						go orderBuffer(queue[floor], orderToNetworkChannel)
+						queue[floor].DirectionUp = false
+						queue[floor].DirectionDown = false
+						
 						// Må queue cleares også?
 					}
 				}
