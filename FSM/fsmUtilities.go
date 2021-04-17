@@ -7,10 +7,7 @@ import (
 	"bufio"
 	"strconv"
 
-	"fmt"
-
 	. "../config"
-	. "../config.go"
 	"../elevio"
 	. "../types"
 )
