@@ -2,8 +2,8 @@ package orderDistributor
 
 import (
 	"fmt"
-	//"time"
-
+	"time"
+	"../timer"
 	. "../config"
 	"../elevio"
 	//"../network/bcast"
@@ -47,7 +47,16 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 		queue[floor].TimedOut = false
 		queue[floor].FromId = ElevatorId
 	}
+
+	// For handling deadlock in orderIn
+	startDraining := make(chan bool)
+	refreshTimer := make(chan time.Duration)
+	resetTime := time.Duration(10)
+	go timer.ResetableTimer(resetTime, refreshTimer, startDraining)
+	go drainChannels(orderIn, startDraining)
+
 	for {
+		refreshTimer <- resetTime
 		select {
 		// Order pipeline
 		case order := <-orderIn:
@@ -57,27 +66,22 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				break
 			}
 
-			switch queue[order.Floor].Status {
-			case NoActiveOrder:
-				
-			}
-
 			switch order.Status {
 			case NoActiveOrder:
 			case WaitingForCost:
 				fmt.Println("*** STATUS waiting for cost: \t", order.Floor)
-
+ 
+				/* Logikk for å skru på lys i gangen hvis den har caborder der selv?
 				if queue[order.Floor].CabOrder == true {
-					// order.Cost[ElevatorId] = queue[order.Floor].Cost[ElevatorId]
 					if order.DirectionUp {
 						elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, order.DirectionUp)
 					}
 					if order.DirectionDown {
 						elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, order.DirectionDown)
 					}
-					orderToNetworkChannel <- order
+					go orderBuffer(order, orderToNetworkChannel)
 					break
-				}
+				} */
 
 				if order.CabOrder == true {
 					order.Cost[ElevatorId] = Costfunction(elevatorState, order) // Bruk costfunction
@@ -86,9 +90,13 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					//orderToNetworkChannel <- order
 					//order.CabOrder = true
 					elevio.SetButtonLamp(elevio.BT_Cab, order.Floor, true)
-					order.Status = Mine
-					queue[order.Floor] = order
-					go orderBuffer(order, orderIn)
+					//order.Status = Mine
+					//queue[order.Floor] = order
+					if queue[order.Floor].CabOrder == false {
+						queue[order.Floor].CabOrder = true
+						go orderBuffer(order, orderOut)
+					}
+					
 					break
 				}
 				if queue[order.Floor].Status > WaitingForCost {
@@ -111,7 +119,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				if queue[order.Floor].Cost[ElevatorId] == MaxCost {
 					fmt.Println("*** adding own cost: \t", order.Floor)
 					queue[order.Floor].Cost[ElevatorId] = Costfunction(elevatorState, order)
-					orderToNetworkChannel <- queue[order.Floor]
+					go orderBuffer(queue[order.Floor], orderToNetworkChannel)
 					fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 					go orderTimer(order, orderIn, 2)
 					fmt.Println("-----------------------------------")
@@ -130,7 +138,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					//fmt.Println("*** order with status WFC advances: \t", order.Floor)
 					queue[order.Floor].Status = Unconfirmed
 					go orderBuffer(queue[order.Floor], orderIn)
-					orderToNetworkChannel <- queue[order.Floor]
+					go orderBuffer(queue[order.Floor], orderToNetworkChannel)
 				}
 				break
 
@@ -148,7 +156,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				if orderFindIdWithLowestCost(order) == ElevatorId {
 					fmt.Println("*** has LOWESTCOST: \t", order.Floor)
 					queue[order.Floor].Status = Confirmed
-					orderToNetworkChannel <- queue[order.Floor]
+					go orderBuffer(queue[order.Floor], orderToNetworkChannel)
 					queue[order.Floor].Status = Mine
 					go orderBuffer(queue[order.Floor], orderIn)
 				} else {
@@ -196,7 +204,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					fmt.Println("** order with status Mine TIMEDOUT: \t", order.Floor)
 					order.Status = Confirmed
 					queue[order.Floor].Status = Confirmed
-					orderToNetworkChannel <- order
+					go orderBuffer(order, orderToNetworkChannel)
 					break
 				} else if order.TimedOut == true {
 					fmt.Println("*** ERROR: Could not expedite Caborder: \r", order.Floor)
@@ -204,7 +212,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 
 				// send til fsm
-				orderOut <- queue[order.Floor]
+				orderBuffer(queue[order.Floor], orderOut)
 				fmt.Println("*** ORDER SENT TO FSM: \t", order.Floor)
 				go orderTimer(order, orderIn, order.Cost[ElevatorId]*3+5) // Må også endres
 				break
@@ -212,15 +220,17 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 			case Done:
 				fmt.Println("****** ORDER DONE: \t", order.Floor)
 				if order.FromId == ElevatorId {
-					orderToNetworkChannel <- order
+					go orderBuffer(order, orderToNetworkChannel)
+					elevio.SetButtonLamp(elevio.BT_Cab, order.Floor, false)
+					order.CabOrder = false
 				}
 				elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, false)
 				elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, false)
-				elevio.SetButtonLamp(elevio.BT_Cab, order.Floor, false)
+
 				order.Status = NoActiveOrder
 				order.DirectionUp = false
 				order.DirectionDown = false
-				order.CabOrder = false
+				
 				order.TimedOut = false
 				for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
 					order.Cost[elevatorNumber] = MaxCost
@@ -237,7 +247,6 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 			break
 
 		default:
-			
 		}
 	}
 }
