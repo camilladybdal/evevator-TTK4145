@@ -239,7 +239,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				fmt.Println("*** DO THING TO MAKE THE QUEUE BE BETTER SEÑOR!")
 				for floor := 0; floor < NumberOfFloors; floor++ {
 					if queue[floor].Status == Mine {
-						queue[floor].Cost[ElevatorId] = MaxCost
+						//queue[floor].Cost[ElevatorId] = MaxCost
 						queue[floor].Status = Confirmed
 						queue[floor].TimedOut = true
 						go orderBuffer(queue[floor], orderToNetworkChannel)
