@@ -109,7 +109,7 @@ func checkError(e error) {
 	}
 }
 
-func WriteToBackUpFile(filename string, elevatorID int, elevator Elevator) {
+func writeToBackUpFile(filename string, elevatorID int, elevator Elevator) {
 	id := strconv.Itoa(elevatorID)
 	file, err := os.Create(filename + id)
 	checkError(err)
@@ -125,7 +125,7 @@ func WriteToBackUpFile(filename string, elevatorID int, elevator Elevator) {
 	file.Write(data)
 }
 
-func ReadFromBackupFile(filename string, elevatorid int, elevator *Elevator) {
+func readFromBackupFile(filename string, elevatorid int, elevator *Elevator) {
 	id := strconv.Itoa(elevatorid)
 	file, _ := os.Open(filename + id)
 	data := make([]byte, NumberOfFloors)
