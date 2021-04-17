@@ -34,6 +34,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 	elevatorInfo.CurrentFloor = 0
 	wasobstr := false
+	updateFileAndElevator:= false
 	
 	var QueueDirection elevio.MotorDirection 
 	QueueDirection = elevio.MD_Stop
@@ -48,7 +49,8 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 	var immobilityNextFloor int
 
 	//read cab-orders from file and add to queues. 
-	
+	readFromBackupFile("CabOrders", ElevatorId, &elevatorInfo)
+
 	go elevio.PollFloorSensor(channels.FloorReached)
 	go elevio.PollObstructionSwitch(channels.Obstruction)
 	fmt.Println("Polling started...")
@@ -106,7 +108,8 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					State = MOVING
 
 					//update elev-info
-					ElevState <- elevatorInfo
+					//ElevState <- elevatorInfo
+					updateFileAndElevator = true
 				}
 			case MOVING:
 				//legger til i køen
@@ -128,7 +131,9 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				}
 
 				//update elev-info
-				ElevState <- elevatorInfo	
+				//ElevState <- elevatorInfo
+				updateFileAndElevator = true
+	
 					
 			case DOOROPEN:
 				if elevatorInfo.CurrentFloor == newOrder.Floor{
@@ -141,7 +146,8 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					removeFromQueue(&elevatorInfo)
 
 					//send a completed order message to OrderDistributed
-					newOrder.Status = Done 
+					newOrder.Status = Done
+					newOrder.FromId = ElevatorId
 					OrderUpdate <- newOrder
 
 				} else {
@@ -156,7 +162,9 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					//if caborder: skriv den til fil 
 
 					//update elev-info
-					ElevState <- elevatorInfo					
+					//ElevState <- elevatorInfo	
+					updateFileAndElevator = true
+				
 				}
 			case IMMOBILE:
 			}
@@ -209,7 +217,9 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					State = DOOROPEN
 
 					//update elev-info
-					ElevState <- elevatorInfo
+					//ElevState <- elevatorInfo
+					updateFileAndElevator = true
+
 				} else {
 					//Restart motorTimer
 					channels.StopImmobileTimer <- true
@@ -247,7 +257,10 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				
 				//si at jeg ikke har IMMOBILE lenger til Jon, da sender jon mine cabbies
 				elevatorInfo.Immobile = false
-				ElevState <- elevatorInfo
+				
+				//ElevState <- elevatorInfo
+				updateFileAndElevator = true
+
 			}
 
 
@@ -301,7 +314,9 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 						fmt.Println("---- Im IDLE, have Closed door and NO MORE IN QUEUE")
 					}
 				}
-				ElevState <- elevatorInfo //update elev-info
+				//ElevState <- elevatorInfo //update elev-info
+				updateFileAndElevator = true
+
 
 			case IMMOBILE:
 				if obstructed == false {
@@ -310,7 +325,9 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					resetDoor <- DOOR_OPEN_TIMER
 					fmt.Println("---- Restarted doortimer")
 				}
-				ElevState <- elevatorInfo //elevstaten har jo ikke endret seg nå...
+				//ElevState <- elevatorInfo 
+				updateFileAndElevator = true
+
 			}
 
 
@@ -336,11 +353,25 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 			emptyQueue(&elevatorInfo)
 			immobilityNextFloor = nextFloor
 			State = IMMOBILE
-			ElevState <- elevatorInfo
+			//ElevState <- elevatorInfo
+			updateFileAndElevator = true
+
 
 		default:
-		}	
+		}
+		if updateFileAndElevator == true{
+			updateFileAndElevator = false
+
+			writeToBackUpFile("CabOrders", ElevatorId, elevatorInfo)
+			//writetoFile("cabOrders", LocalID, elevator)
+			go func() { ElevState <- elevatorInfo }()
+
+		}
+
+		
+
 	}
+
 }
 
 

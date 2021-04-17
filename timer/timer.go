@@ -27,15 +27,6 @@ func StoppableTimer(interval time.Duration, id int, stopTimer <-chan bool, timed
 	}
 }
 
-func CountDownTimer(interval time.Duration, timedOut chan<- bool) {
-	timer := time.NewTimer(interval * time.Second)
-
-	for {
-		<-timer.C
-		timedOut <- true
-		return
-	}
-}
 
 func ResetableTimer(duration time.Duration, newCountdownTime <-chan time.Duration, timedOut chan<- bool) {
 	timer := time.NewTimer(duration * time.Second)
