@@ -11,7 +11,7 @@ import (
 	. "../types"
 )
 
-func addToQueue(elevatorInfo Elevator, newOrder Order) {
+func addToQueue(elevatorInfo *Elevator, newOrder Order) {
 	if newOrder.DirectionUp == true || newOrder.CabOrder == true {
 		elevatorInfo.UpQueue[newOrder.Floor] = 1
 		fmt.Println("----Added to Upqueue")

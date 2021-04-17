@@ -82,7 +82,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				} else {
 
 					//legger til i køen
-					addToQueue(elevatorInfo, newOrder)
+					addToQueue(&elevatorInfo, newOrder)
 
 					//Søker etter floor HVIS den er i IDLE
 					nextFloor = queueSearch(QueueDirection, elevatorInfo)
@@ -106,7 +106,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				}
 			case MOVING:
 				//legger til i køen
-				addToQueue(elevatorInfo, newOrder)
+				addToQueue(&elevatorInfo, newOrder)
 
 				if queueSearch(QueueDirection, elevatorInfo) == elevatorInfo.CurrentFloor {
 					break
@@ -137,7 +137,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 				} else {
 					//legger til i køen
-					addToQueue(elevatorInfo, newOrder)
+					addToQueue(&elevatorInfo, newOrder)
 
 					//update elev-info
 					//ElevState <- elevatorInfo
