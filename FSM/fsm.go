@@ -6,7 +6,7 @@ import (
 	. "../types"
 	. "../timer"
 	. "../config"
-	//"time"
+	"time"
 )
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -37,6 +37,11 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 	
 	var QueueDirection elevio.MotorDirection 
 	QueueDirection = elevio.MD_Stop
+	
+	//newCountdownTime <-chan time.Duration
+	resetDoor := make(chan time.Duration)
+	go ResetableTimer(time.Duration(0), resetDoor, channels.DoorTimedOut)
+	<- channels.DoorTimedOut
 
 	var nextFloor int
 	var obstructed bool
@@ -61,7 +66,10 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				if elevatorInfo.CurrentFloor == newOrder.Floor{
 
 					elevio.SetDoorOpenLamp(true)
-					go CountDownTimer(DOOR_OPEN_TIMER, channels.DoorTimedOut) 
+					//go CountDownTimer(DOOR_OPEN_TIMER, channels.DoorTimedOut) 
+					resetDoor <- DOOR_OPEN_TIMER
+					
+					
 					fmt.Println("---- Started Doortimer")
 
 					newOrder.Status = Done 
@@ -90,7 +98,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					elevio.SetMotorDirection(dir)
 					QueueDirection = dir
 					elevatorInfo.Direction = dir	
-					
+
 					fmt.Println("---- direction to floor is: " , dir)
 					
 					//Start Motortimer
@@ -127,7 +135,9 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				if elevatorInfo.CurrentFloor == newOrder.Floor{
 
 					elevio.SetDoorOpenLamp(true)
-					go CountDownTimer(DOOR_OPEN_TIMER, channels.DoorTimedOut) 
+
+					//Reset this timer, dont start a new
+					resetDoor <- DOOR_OPEN_TIMER
 					fmt.Println(" ---- Started Doortimer")
 					removeFromQueue(&elevatorInfo)
 
@@ -195,7 +205,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 
 					//starte door-timer
-					go CountDownTimer(DOOR_OPEN_TIMER, channels.DoorTimedOut)
+					resetDoor <- DOOR_OPEN_TIMER
 					fmt.Println("---- Started doortimer")
 					State = DOOROPEN
 
@@ -223,7 +233,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					elevio.SetDoorOpenLamp(true)					
 					removeFromQueue(&elevatorInfo)
 
-					go CountDownTimer(DOOR_OPEN_TIMER, channels.DoorTimedOut)
+					resetDoor <- DOOR_OPEN_TIMER
 					fmt.Println("---- Started doortimer")
 					State = DOOROPEN
 
@@ -255,7 +265,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				if obstructed == true{
 					fmt.Println("---- OBSTRUCTION")
 
-					go CountDownTimer(DOOR_OPEN_TIMER, channels.DoorTimedOut)
+					resetDoor <- DOOR_OPEN_TIMER
 					fmt.Println("---- Restarted doortimer")
 
 					if wasobstr == false {
@@ -267,11 +277,11 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				}				
 				if obstructed == false && wasobstr == true{
 					fmt.Println("---- OBSTRUCTION OFF")
-
 					fmt.Println("---- Stopping immobility timer 1")
 					elevio.SetDoorOpenLamp(false) 
 					channels.StopImmobileTimer <- true
 					}
+
 				if checkOrdersPresent(elevatorInfo) == true && obstructed == false{
 					elevio.SetDoorOpenLamp(false)
 					nextFloor = queueSearch(QueueDirection, elevatorInfo)
@@ -298,7 +308,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				if obstructed == false {
 					State = DOOROPEN
 					elevatorInfo.Immobile = false
-					go CountDownTimer(DOOR_OPEN_TIMER, channels.DoorTimedOut)
+					resetDoor <- DOOR_OPEN_TIMER
 					fmt.Println("---- Restarted doortimer")
 				}
 				ElevState <- elevatorInfo //elevstaten har jo ikke endret seg nå...
@@ -314,7 +324,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					}
 					if State == IMMOBILE{
 						State = DOOROPEN
-						go CountDownTimer(DOOR_OPEN_TIMER, channels.DoorTimedOut)
+						resetDoor <- DOOR_OPEN_TIMER
 						fmt.Println("---- Restarted doortimer, no longer obstructed")
 					}
 				}
@@ -330,7 +340,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 			ElevState <- elevatorInfo
 
 		default:
-		}
+		}	
 	}
 }
 
