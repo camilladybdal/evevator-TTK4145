@@ -66,7 +66,6 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				if elevatorInfo.CurrentFloor == newOrder.Floor{
 
 					elevio.SetDoorOpenLamp(true)
-					//go CountDownTimer(DOOR_OPEN_TIMER, channels.DoorTimedOut) 
 					resetDoor <- DOOR_OPEN_TIMER
 					
 					
