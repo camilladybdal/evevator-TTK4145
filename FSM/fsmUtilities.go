@@ -23,16 +23,15 @@ func InitFSM(numFloors int) {
 	fmt.Println("FSM Initialized ")
 }
 
-func goToNextInQueue(channels FsmChannels, elevatorInfo Elevator, QueueDirection elevio.MotorDirection) {
-	nextFloor := queueSearch(QueueDirection, elevatorInfo)
+func goToNextInQueue(channels FsmChannels, elevatorInfo Elevator, QueueDirection elevio.MotorDirection, nextFloor *int) {
+	*nextFloor = queueSearch(QueueDirection, elevatorInfo)
 	fmt.Println("---- floor im heading for is: ", nextFloor)
 
-	dir := getDirection(elevatorInfo.CurrentFloor, nextFloor)
+	dir := getDirection(elevatorInfo.CurrentFloor, *nextFloor)
 	elevio.SetMotorDirection(dir)
 	QueueDirection = dir
 	elevatorInfo.Direction = dir
 
-	//Start Motortimer
 	go StoppableTimer(MAX_TRAVEL_TIME, 1, channels.StopImmobileTimer, channels.Immobile)
 	fmt.Println("---- Started motortimer")
 }
@@ -135,9 +134,9 @@ func queueSearch(QueueDirection elevio.MotorDirection, elevator Elevator) int {
 			}
 		}
 	}
-	if nextFloor == -1 {
-		panic("problemo")
-	}
+	//if nextFloor == -1 {
+	//	panic("problemo")
+	//}
 	return nextFloor
 }
 

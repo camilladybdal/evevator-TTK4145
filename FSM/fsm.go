@@ -29,6 +29,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 	var nextFloor int
 	var obstructed bool
+	var immobilityNextFloor int
 
 	//read cab-orders from file and add to queues.
 	readFromBackupFile("CabOrders", ElevatorId, &elevatorInfo)
@@ -62,7 +63,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 					//legger til i køen
 					addToQueue(&elevatorInfo, newOrder)
-					goToNextInQueue(channels, elevatorInfo, QueueDirection)
+					goToNextInQueue(channels, elevatorInfo, QueueDirection, &nextFloor)
 					State = MOVING
 
 					//update elev-info
@@ -114,6 +115,12 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 			case MOVING:
 
 				nextFloor = queueSearch(QueueDirection, elevatorInfo)
+
+				if nextFloor == -1 {
+					nextFloor = immobilityNextFloor
+					fmt.Println("Using immobility nextFloor which is:", nextFloor)
+				}
+
 				fmt.Println("---- I am heding for this floor: ", nextFloor)
 
 				if nextFloor == floorArrival {
@@ -144,7 +151,10 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 			case DOOROPEN:
 			case IMMOBILE:
 
-				if nextFloor == floorArrival {
+				elevatorInfo.Immobile = false
+				readFromBackupFile("CabOrders", ElevatorId, &elevatorInfo)
+
+				if immobilityNextFloor == floorArrival {
 					elevio.SetMotorDirection(elevio.MD_Stop)
 					elevatorInfo.Direction = elevio.MD_Stop
 
@@ -164,7 +174,6 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					State = MOVING
 
 				}
-				elevatorInfo.Immobile = false
 				updateFileAndElevator = true
 			}
 
@@ -198,7 +207,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 				if checkOrdersPresent(elevatorInfo) == true && obstructed == false {
 					elevio.SetDoorOpenLamp(false)
-					goToNextInQueue(channels, elevatorInfo, QueueDirection)
+					goToNextInQueue(channels, elevatorInfo, QueueDirection, &nextFloor)
 					State = MOVING
 				} else {
 					if obstructed == false && checkOrdersPresent(elevatorInfo) == false {
@@ -213,6 +222,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				if obstructed == false {
 					State = DOOROPEN
 					elevatorInfo.Immobile = false
+					readFromBackupFile("CabOrders", ElevatorId, &elevatorInfo)
 					resetDoor <- DOOR_OPEN_TIMER
 					fmt.Println("---- Restarted doortimer")
 				}
@@ -240,11 +250,13 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 			elevatorInfo.Immobile = true
 			State = IMMOBILE
 			updateFileAndElevator = true
+			immobilityNextFloor = nextFloor
+			fmt.Println("immobilitynextfloor is: ", immobilityNextFloor)
 
 		default:
 			if startupAfterCrash == true {
 				startupAfterCrash = false
-				goToNextInQueue(channels, elevatorInfo, QueueDirection)
+				goToNextInQueue(channels, elevatorInfo, QueueDirection, &nextFloor)
 				State = MOVING
 			}
 		}
