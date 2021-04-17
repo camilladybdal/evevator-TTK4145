@@ -175,6 +175,9 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				if order.DirectionDown == true {
 					elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, true)
 				}
+				if queue[order.Floor].Status < Confirmed && order.TimedOut == false {
+					go orderBuffer(order, orderToNetworkChannel)
+				}
 
 				fmt.Println("*** STATUS Confirmed: \t", order.Floor)
 				if queue[order.Floor].Status > Confirmed {
