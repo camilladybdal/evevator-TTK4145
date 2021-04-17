@@ -1,23 +1,20 @@
 package main
 
 import (
-
-	. "./FSM"
-	"./elevio"
-	. "./orderDistributor"
-	. "./types"
 	"fmt"
-	."./config"
 	"time"
 
+	. "./config"
+	"./elevio"
+	. "./fsm"
+	. "./orderDistributor"
+	. "./types"
 )
-
 
 func main() {
 
-	
 	fmt.Println("LETS GO")
-	
+
 	// FSM channels
 	var fsmChannels FsmChannels
 	fsmChannels.FloorReached = make(chan int)
@@ -32,19 +29,15 @@ func main() {
 	orderUpdate := make(chan Order)
 	getElevatorState := make(chan Elevator)
 
-
 	elevio.Init(ElevatorAddress, NumberOfFloors)
 	InitFSM(NumberOfFloors)
 
 	go OrderDistributor(fsmChannels.NewOrder, orderUpdate, getElevatorState)
 	go RunElevator(fsmChannels, orderUpdate, getElevatorState)
 
-
 	for {
-		time.Sleep(3*time.Second)
+		time.Sleep(3 * time.Second)
 		fmt.Println("MAIN RUNNING")
 	}
-   
+
 }
-
-

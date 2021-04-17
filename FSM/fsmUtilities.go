@@ -1,6 +1,7 @@
 package fsm
 
 import (
+	"fmt"
 	"os"
 
 	"strconv"
@@ -10,18 +11,35 @@ import (
 	. "../types"
 )
 
+func addToQueue(elevatorInfo Elevator, newOrder Order) {
+	if newOrder.DirectionUp == true || newOrder.CabOrder == true {
+		elevatorInfo.UpQueue[newOrder.Floor] = 1
+		fmt.Println("----Added to Upqueue")
+
+	}
+	if newOrder.DirectionDown == true || newOrder.CabOrder == true {
+		elevatorInfo.DownQueue[newOrder.Floor] = 1
+		fmt.Println("----Added to Downqueue")
+	}
+
+}
+
 func expidizeOrder(elevator Elevator, OrderUpdate chan<- Order) {
 	var Expidized_order Order
 	Expidized_order.Floor = elevator.CurrentFloor
 	Expidized_order.Status = Done
 	Expidized_order.FromId = ElevatorId
 	OrderUpdate <- Expidized_order
+	fmt.Println("---- Order to floor :", Expidized_order.Floor, "is expidized")
 }
 
 func getDirection(currentFloor int, destinationFloor int) elevio.MotorDirection {
 	if currentFloor-destinationFloor > 0 {
+		fmt.Println("---- direction is: ", elevio.MD_Down)
 		return elevio.MD_Down
+
 	} else {
+		fmt.Println("---- direction is: ", elevio.MD_Up)
 		return elevio.MD_Up
 	}
 }
@@ -43,6 +61,10 @@ func queueSearch(QueueDirection elevio.MotorDirection, elevator Elevator) int {
 	if QueueDirection == elevio.MD_Stop {
 		QueueDirection = elevio.MD_Up
 	}
+
+	//for debugging: which floor is current of which
+	fmt.Println("---- QUEUESEARCH: current floor is ", elevator.CurrentFloor)
+	fmt.Println("---- QUEUESEARCH: Queuedirection is ", QueueDirection)
 
 	if QueueDirection == elevio.MD_Up {
 		for floor := elevator.CurrentFloor; floor < NumberOfFloors; floor++ {
@@ -86,6 +108,9 @@ func queueSearch(QueueDirection elevio.MotorDirection, elevator Elevator) int {
 				return nextFloor
 			}
 		}
+	}
+	if nextFloor == -1 {
+		panic("problemo")
 	}
 	return nextFloor
 }
