@@ -120,7 +120,7 @@ func drainChannels(orderIn chan Order, startDraining <-chan bool) {
 		}
 		if drain == true {
 			//only do if possible (how?)
-			fmt.Println("*** DRAINING!!!")
+			fmt.Println("*** DRAINING!!!------------------------------------------------------------------")
 			select {
 			case <- orderIn:
 			}
