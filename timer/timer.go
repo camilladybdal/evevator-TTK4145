@@ -44,7 +44,6 @@ func ResetableTimer(duration time.Duration, newCountdownTime <-chan time.Duratio
 		select {
 		case newTime := <- newCountdownTime:
 			timer.Reset(newTime * time.Second)
-			timedOut <- false
 		case <-timer.C:
 			timedOut <- true
 		}
