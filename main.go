@@ -2,13 +2,12 @@ package main
 
 import (
 
-
 	. "./FSM"
 	"./elevio"
 	. "./orderDistributor"
 	. "./types"
 	"fmt"
-	//."./config"
+	."./config"
 	"time"
 )
 
@@ -18,6 +17,8 @@ type HelloMsg struct {
 }
 
 func main() {
+
+	/*
 	test := 10000
 	test2 := 100000
 	var duration time.Duration
@@ -47,9 +48,9 @@ func main() {
 				test2--
 			}
 		}
-	}
+	}*/
 
-	/*
+	
 	fmt.Println("LETS GO")
 	
 	// FSM channels
@@ -73,8 +74,11 @@ func main() {
 	go OrderDistributor(fsmChannels.NewOrder, orderUpdate, getElevatorState)
 	go RunElevator(fsmChannels, orderUpdate, getElevatorState)
 
-	*/
-	for {}
+
+	for {
+		time.Sleep(3*time.Second)
+		fmt.Println("MAIN RUNNING")
+	}
    
 }
 
