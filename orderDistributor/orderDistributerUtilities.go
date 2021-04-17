@@ -29,7 +29,7 @@ func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork cha
 	for {
 		select {
 		case order := <-orderToNetwork:
-			fmt.Println("*** order sent to network: \t", order.Floor)
+			//fmt.Println("*** order sent to network: \t", order.Floor)
 			order.FromId = ElevatorId
 			order.CabOrder = false
 			
@@ -40,7 +40,7 @@ func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork cha
 				//fmt.Println("*** read own order from network")
 				break
 			}
-			fmt.Println("*** order recv from network: \t", order.Floor)
+			//fmt.Println("*** order recv from network: \t", order.Floor)
 			go orderBuffer(order, orderFromNetwork)
 		}
 	}
@@ -55,7 +55,7 @@ func orderTimer(order Order, timedOut chan<- Order, duration int) {
 		duration--
 	}
 	order.TimedOut = true
-	fmt.Println("*** order timer expired: \t", order.Floor)
+	fmt.Println("*** order timer expired: \t", order.Floor, order.Status)
 	timedOut <- order
 }
 
@@ -82,13 +82,10 @@ func pollOrders(orderIn chan Order) {
 
 			for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
 				newOrder.Cost[elevatorNumber] = MaxCost
-				fmt.Println("kommer hit 1")
 			}
-
 			newOrder.Status = WaitingForCost
 			newOrder.TimedOut = false
 			go orderBuffer(newOrder, orderIn)
-			fmt.Println("kommer hit 2")
 		}
 	}
 }
@@ -102,10 +99,10 @@ func orderFindIdWithLowestCost(order Order) (int) {
 	}
 	if order.Cost[lowestCostId] == MaxCost {
 		lowestCostId = ElevatorId
-		fmt.Println("** all elevators MAXCOST: \t", order.Floor)
+		fmt.Println("****** all elevators MAXCOST: \t", order.Floor)
 
 	}
-	fmt.Println("*** lowest cost id: ", lowestCostId, " floor: \t", order.Floor)
+	//fmt.Println("*** lowest cost id: ", lowestCostId, " floor: \t", order.Floor)
 	return lowestCostId
 }
 
