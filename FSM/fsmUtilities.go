@@ -1,16 +1,11 @@
 package fsm
 
 import (
-	"fmt"
 	"os"
 
-	"bufio"
 	"strconv"
 
-	"fmt"
-
 	. "../config"
-	. "../config.go"
 	"../elevio"
 	. "../types"
 )
@@ -114,35 +109,36 @@ func checkError(e error) {
 	}
 }
 
-func openBackupFile() {
-	if _, err := os.Stat("backupCabOrders.txt"); os.IsNotExist(err) {
-		filename, err := os.Create("backupCabOrders.txt")
-		checkError(err)
-		defer filename.Close()
-		for i := 0; i < NumberOfFloors; i++ {
-			_, err1 := filename.WriteString(fmt.Sprintf("%d\n", 0))
-			checkError(err1)
+func WriteToBackUpFile(filename string, elevatorID int, elevator Elevator) {
+	id := strconv.Itoa(elevatorID)
+	file, err := os.Create(filename + id)
+	checkError(err)
+	var write string
+	for i := 0; i < NumberOfFloors; i++ {
+		if elevator.UpQueue[i] == 1 && elevator.DownQueue[i] == 1 {
+			write = write + "1"
+		} else {
+			write = write + "0"
 		}
 	}
-	filename, err := os.Open("backupCabOrders.txt")
-	checkError(err)
-	defer filename.Close()
+	data := []byte(write)
+	file.Write(data)
 }
 
-func readFromBackupFile(filename *os.File) []int {
-	var CabOrderArray []int
-	scanner := bufio.NewScanner(filename)
-	scanner.Split(bufio.ScanLines)
-	for scanner.Scan() {
-		data, err := strconv.Atoi(scanner.Text())
-		checkError(err)
-		CabOrderArray = append(CabOrderArray, data)
+func ReadFromBackupFile(filename string, elevatorid int, elevator *Elevator) {
+	id := strconv.Itoa(elevatorid)
+	file, _ := os.Open(filename + id)
+	data := make([]byte, NumberOfFloors)
+	file.Read(data)
+
+	for i := 0; i < NumberOfFloors; i++ {
+		if string(data[i]) == "1" {
+			elevator.UpQueue[i] = 1
+			elevator.DownQueue[i] = 1
+		} else {
+			elevator.UpQueue[i] = 0
+			elevator.DownQueue[i] = 0
+		}
 	}
-	return CabOrderArray
-}
-
-func writeToBackUpFile(filename *os.File) {
-	//når du får orderen inn i fsm, så må du skrive ned til fil
-	// dvs. skriv 1 til fil på den linja du har floor til
-	//når du har utført orderen må du skrive 0 til linja med floor-nr
+	file.Close()
 }
