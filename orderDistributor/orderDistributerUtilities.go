@@ -1,6 +1,6 @@
 package orderDistributor
 
-import(
+import (
 	"time"
 	"fmt"
 	. "../config"
@@ -58,9 +58,9 @@ func orderTimer(order Order, timedOut chan<- Order, duration int) {
 	timedOut <- order
 }
 
-func orderBuffer(order Order, orderIn chan<- Order) {
+func orderBuffer(order Order, bufferTo chan<- Order) {
 	//fmt.Println("Order in buffer, F: ", order.Floor)
-	orderIn <- order
+	bufferTo <- order
 	return
 }
 
@@ -106,4 +106,23 @@ func orderFindIdWithLowestCost(order Order) (int) {
 	}
 	fmt.Println("*** lowest cost id: ", lowestCostId, " floor: \t", order.Floor)
 	return lowestCostId
+}
+
+func drainChannels(orderIn chan Order, startDraining <-chan bool) {
+
+	drain := false	
+
+	for {
+		select {
+		case drain = <- startDraining:
+
+		}
+		if drain == true {
+			//only do if possible (how?)
+			fmt.Println("*** DRAINING!!!")
+			select {
+			case <- orderIn:
+			}
+		}
+	}
 }

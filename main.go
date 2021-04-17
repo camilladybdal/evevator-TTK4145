@@ -2,13 +2,14 @@ package main
 
 import (
 
-
 	. "./FSM"
 	"./elevio"
 	. "./orderDistributor"
 	. "./types"
 	"fmt"
 	."./config"
+	"time"
+
 )
 
 
@@ -38,8 +39,11 @@ func main() {
 	go OrderDistributor(fsmChannels.NewOrder, orderUpdate, getElevatorState)
 	go RunElevator(fsmChannels, orderUpdate, getElevatorState)
 
-	
-	for {}
+
+	for {
+		time.Sleep(3*time.Second)
+		fmt.Println("MAIN RUNNING")
+	}
    
 }
 
