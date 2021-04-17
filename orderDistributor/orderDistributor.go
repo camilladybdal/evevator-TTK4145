@@ -150,13 +150,18 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				break
 			}
 
+			switch queue[order.Floor].Status {
+			case NoActiveOrder:
+				
+			}
+
 			switch order.Status {
 			case NoActiveOrder:
 			case WaitingForCost:
 				fmt.Println("*** STATUS waiting for cost: \t", order.Floor)
 
 				if queue[order.Floor].CabOrder == true {
-					order.Cost[ElevatorId] = queue[order.Floor].Cost[ElevatorId]
+					// order.Cost[ElevatorId] = queue[order.Floor].Cost[ElevatorId]
 					if order.DirectionUp {
 						elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, order.DirectionUp)
 					}

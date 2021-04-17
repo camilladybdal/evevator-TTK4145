@@ -36,3 +36,16 @@ func CountDownTimer(interval time.Duration, timedOut chan<- bool) {
 		return
 	}
 }
+
+func ResetableTimer(duration time.Duration, newCountdownTime <-chan time.Duration, timedOut chan<- bool) {
+	timer := time.NewTimer(duration * time.Second)
+
+	for {
+		select {
+		case newTime := <- newCountdownTime:
+			timer.Reset(newTime * time.Second)
+		case <-timer.C:
+			timedOut <- true
+		}
+	}
+}
