@@ -168,6 +168,9 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				break
 
 			case Confirmed:
+				if queue[order.Floor].Status == NoActiveOrder {
+					break
+				}
 				// Sette på lys
 				if order.DirectionUp == true {
 					elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, true)
@@ -178,7 +181,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				if queue[order.Floor].Status < Confirmed && order.TimedOut == false {
 					go orderBuffer(order, orderToNetworkChannel)
 				}
-
+			
 				fmt.Println("*** STATUS Confirmed: \t", order.Floor)
 				if queue[order.Floor].Status > Confirmed {
 					fmt.Println("*** at higher status: \t", order.Floor)
