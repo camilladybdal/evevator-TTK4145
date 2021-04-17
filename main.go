@@ -2,11 +2,11 @@ package main
 
 import (
 
-	//. "./FSM"
-	"./timer"
-	//"./elevio"
-	//. "./orderDistributor"
-	//. "./types"
+
+	. "./FSM"
+	"./elevio"
+	. "./orderDistributor"
+	. "./types"
 	"fmt"
 	//."./config"
 	"time"
@@ -75,7 +75,7 @@ func main() {
 
 	*/
 	for {}
-
+   
 }
 
 

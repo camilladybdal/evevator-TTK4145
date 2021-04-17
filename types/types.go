@@ -2,16 +2,8 @@ package types
 
 
 import (
-	"time"
 	"../elevio"
    . "../config"
-)
-
-const (
-	NumFloors   	 	int = 4
-	DOOROPENTIME 	 	time.Duration = 3
-	PASSINGFLOORTIME 	time.Duration = 4
-	MAXOBSTRUCTIONTIME  time.Duration = 9 //?
 )
 
 type State int
@@ -22,17 +14,6 @@ const (
 	DOOROPEN       = 2
 	IMMOBILE      = 3
 )
-
-/*
-type Direction int
-const (
-	Up 	  Direction = 1
-	Down 			= -1
-	Stop			= 0
-)
-*/
-
-// Constants
 
 type Status int
 
@@ -58,11 +39,9 @@ type Order struct {
 	FromId		  int
 }
 
-
-
 type Elevator struct {
-	UpQueue      [NumFloors]int
-	DownQueue    [NumFloors]int
+	UpQueue      [NumberOfFloors ]int
+	DownQueue    [NumberOfFloors ]int
 	CurrentFloor int
 	Direction    elevio.MotorDirection
 	Immobile    bool
