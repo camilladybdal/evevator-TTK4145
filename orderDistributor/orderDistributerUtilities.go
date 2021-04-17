@@ -31,6 +31,7 @@ func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork cha
 		case order := <-orderToNetwork:
 			fmt.Println("*** order sent to network: \t", order.Floor)
 			order.FromId = ElevatorId
+			order.CabOrder = false
 			
 			go orderNetworkResending(order, networkTransmit)
 

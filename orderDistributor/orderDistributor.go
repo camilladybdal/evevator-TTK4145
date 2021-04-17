@@ -94,6 +94,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					//queue[order.Floor] = order
 					if queue[order.Floor].CabOrder == false {
 						queue[order.Floor].CabOrder = true
+						fmt.Println("*** sent caborder to FSM")
 						go orderBuffer(order, orderOut)
 					}
 					
@@ -119,7 +120,9 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				if queue[order.Floor].Cost[ElevatorId] == MaxCost {
 					fmt.Println("*** adding own cost: \t", order.Floor)
 					queue[order.Floor].Cost[ElevatorId] = Costfunction(elevatorState, order)
-					go orderBuffer(queue[order.Floor], orderToNetworkChannel)
+					order = queue[order.Floor]
+					order.CabOrder = false
+					go orderBuffer(order, orderToNetworkChannel)
 					fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 					go orderTimer(order, orderIn, 2)
 					fmt.Println("-----------------------------------")
