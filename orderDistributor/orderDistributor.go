@@ -210,7 +210,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				if order.DirectionDown == true {
 					queue[order.Floor].DirectionDown = true
 				}
-				orderBuffer(queue[order.Floor], orderOut)
+				go orderBuffer(queue[order.Floor], orderOut)
 				fmt.Println("*** ORDER SENT TO FSM: \t", order.Floor)
 				go orderTimer(order, orderIn, order.Cost[ElevatorId]*3+5)
 				break
