@@ -55,7 +55,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					resetDoor <- DOOR_OPEN_TIMER
 					fmt.Println("---- Started Doortimer")
 
-					//expidizeOrder(elevatorInfo, OrderUpdate)
+					expidizeOrder(elevatorInfo, OrderUpdate)
 
 					State = DOOROPEN
 
@@ -94,7 +94,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					fmt.Println(" ---- Started Doortimer")
 					removeFromQueue(&elevatorInfo)
 
-					//expidizeOrder(elevatorInfo, OrderUpdate)
+					expidizeOrder(elevatorInfo, OrderUpdate)
 
 				} else {
 					addToQueue(&elevatorInfo, newOrder)
@@ -134,7 +134,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 					elevio.SetDoorOpenLamp(true)
 					removeFromQueue(&elevatorInfo)
-					//expidizeOrder(elevatorInfo, OrderUpdate)
+					expidizeOrder(elevatorInfo, OrderUpdate)
 
 					resetDoor <- DOOR_OPEN_TIMER
 					fmt.Println("---- Started doortimer")
@@ -158,7 +158,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					elevio.SetMotorDirection(elevio.MD_Stop)
 					elevatorInfo.Direction = elevio.MD_Stop
 
-					//expidizeOrder(elevatorInfo, OrderUpdate)
+					expidizeOrder(elevatorInfo, OrderUpdate)
 
 					elevio.SetDoorOpenLamp(true)
 					removeFromQueue(&elevatorInfo)
