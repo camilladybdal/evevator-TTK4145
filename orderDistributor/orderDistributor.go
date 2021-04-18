@@ -57,9 +57,22 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 	for {
 		refreshTimer <- resetTime
+		
 		select {
 		// Order pipeline
 		case order := <-orderIn:
+			if queue[order.Floor].Status >= Confirmed {
+				if queue[order.Floor].DirectionUp == false && order.DirectionUp == true {
+					elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, true)
+					queue[order.Floor].DirectionUp = true
+					go orderBuffer(order, orderToNetworkChannel)
+				}
+				if queue[order.Floor].DirectionDown == false && order.DirectionDown == true {
+					elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, true)
+					queue[order.Floor].DirectionDown = true
+					go orderBuffer(order, orderToNetworkChannel)
+				}
+			}
 			if queue[order.Floor].Status == NoActiveOrder && order.TimedOut {
 				//fmt.Println("*** expired order invalid: \t", order.Floor)
 				break
@@ -138,7 +151,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 				if orderFindIdWithLowestCost(order) == ElevatorId {
 					fmt.Println("*** has LOWESTCOST: \t", order.Floor)
-					if elevatorState.CurrentFloor != order.Floor {
+					if elevatorState.CurrentFloor != order.Floor || elevatorState.Direction == elevio.MD_Stop {
 						queue[order.Floor].Status = Confirmed
 						order.Status = Confirmed
 						go orderBuffer(order, orderToNetworkChannel)
