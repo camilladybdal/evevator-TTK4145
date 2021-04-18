@@ -186,6 +186,8 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 			case MOVING:
 			case DOOROPEN:
 
+				expidizeOrder(elevatorInfo, OrderUpdate)
+
 				if obstructed == true {
 					fmt.Println("---- OBSTRUCTION")
 
