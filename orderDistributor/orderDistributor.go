@@ -199,9 +199,11 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					go orderBuffer(order, orderIn)
 					break
 				}
-
+				if queue[order.Floor].Status != Confirmed {
+					go orderTimer(queue[order.Floor], orderIn, order.Cost[orderFindIdWithLowestCost(order)]*3+5)
+				}
 				queue[order.Floor].Status = order.Status
-				go orderTimer(queue[order.Floor], orderIn, order.Cost[orderFindIdWithLowestCost(order)]*3+5) // Må endres til et uttrykk med costen
+				 // Må endres til et uttrykk med costen
 				// Hva skjer hvis alle har MaxCost?
 
 			case Mine:
