@@ -64,7 +64,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				//fmt.Println("*** expired order invalid: \t", order.Floor)
 				break
 			}
-			if elevatorImmobile && order.CabOrder == false {
+			if elevatorImmobile && order.CabOrder == false && order.Status != Done {
 				break
 			}
 			switch order.Status {
