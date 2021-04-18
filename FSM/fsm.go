@@ -63,7 +63,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 					//legger til i køen
 					addToQueue(&elevatorInfo, newOrder)
-					goToNextInQueue(channels, elevatorInfo, QueueDirection, &nextFloor)
+					goToNextInQueue(channels, elevatorInfo, &QueueDirection, &nextFloor)
 					State = MOVING
 
 					//update elev-info
@@ -209,7 +209,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 				if checkOrdersPresent(elevatorInfo) == true && obstructed == false {
 					elevio.SetDoorOpenLamp(false)
-					goToNextInQueue(channels, elevatorInfo, QueueDirection, &nextFloor)
+					goToNextInQueue(channels, elevatorInfo, &QueueDirection, &nextFloor)
 					State = MOVING
 				} else {
 					if obstructed == false && checkOrdersPresent(elevatorInfo) == false {
@@ -258,7 +258,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 		default:
 			if startupAfterCrash == true {
 				startupAfterCrash = false
-				goToNextInQueue(channels, elevatorInfo, QueueDirection, &nextFloor)
+				goToNextInQueue(channels, elevatorInfo, &QueueDirection, &nextFloor)
 				State = MOVING
 			}
 		}
