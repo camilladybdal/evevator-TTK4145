@@ -138,9 +138,11 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 				if orderFindIdWithLowestCost(order) == ElevatorId {
 					fmt.Println("*** has LOWESTCOST: \t", order.Floor)
-					queue[order.Floor].Status = Confirmed
-					order.Status = Confirmed
-					go orderBuffer(order, orderToNetworkChannel)
+					if elevatorState.CurrentFloor != order.Floor {
+						queue[order.Floor].Status = Confirmed
+						order.Status = Confirmed
+						go orderBuffer(order, orderToNetworkChannel)
+					}
 					queue[order.Floor].Status = Mine
 					go orderBuffer(queue[order.Floor], orderIn)
 				} else {
