@@ -46,6 +46,9 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 		queue[floor].Status = NoActiveOrder
 		queue[floor].TimedOut = false
 		queue[floor].FromId = ElevatorId
+		
+		elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, false)
+		elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, false)
 	}
 
 	// For handling deadlock in orderIn
@@ -78,6 +81,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				break
 			}
 			if elevatorImmobile && order.CabOrder == false && order.Status != Done {
+				fmt.Println("*** Elevator is immobile")
 				break
 			}
 			switch order.Status {
