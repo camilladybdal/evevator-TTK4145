@@ -46,9 +46,9 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 		queue[floor].Status = NoActiveOrder
 		queue[floor].TimedOut = false
 		queue[floor].FromId = ElevatorId
-		
-		elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, false)
-		elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, false)
+
+		elevio.SetButtonLamp(elevio.BT_HallUp, floor, false)
+		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false)
 	}
 
 	// For handling deadlock in orderIn
