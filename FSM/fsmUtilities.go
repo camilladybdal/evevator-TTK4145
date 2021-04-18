@@ -25,7 +25,7 @@ func InitFSM(numFloors int) {
 
 func goToNextInQueue(channels FsmChannels, elevatorInfo Elevator, QueueDirection *elevio.MotorDirection, nextFloor *int) {
 	*nextFloor = queueSearch(*QueueDirection, elevatorInfo)
-	fmt.Println("---- floor im heading for is: ", nextFloor)
+	fmt.Println("---- floor im heading for is: ", *nextFloor)
 
 	dir := getDirection(elevatorInfo.CurrentFloor, *nextFloor)
 	elevio.SetMotorDirection(dir)

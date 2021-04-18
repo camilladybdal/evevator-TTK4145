@@ -240,9 +240,11 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 				}
 				if State == IMMOBILE {
 					State = DOOROPEN
+					elevatorInfo.Immobile = false
 					resetDoor <- DOOR_OPEN_TIMER
 					fmt.Println("---- Restarted doortimer, no longer obstructed")
 				}
+				updateFileAndElevator = false
 			}
 
 		case <-channels.Immobile:
