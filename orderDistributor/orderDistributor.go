@@ -122,7 +122,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					queue[order.Floor].Cost[ElevatorId] = Costfunction(elevatorState, order)
 					order.Cost[ElevatorId] = queue[order.Floor].Cost[ElevatorId]
 					go orderBuffer(order, orderToNetworkChannel)
-					go orderTimer(order, orderIn, 2)
+					go orderTimer(order, orderIn, 1)
 				}
 
 				allCostsPresent := true
