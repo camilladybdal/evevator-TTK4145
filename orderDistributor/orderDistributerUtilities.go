@@ -10,10 +10,10 @@ import (
 	//. "../costfnc"
 )
 func orderNetworkResending(order Order, orderToNetwork chan<- Order) {
-	redundancy := 3
+	redundancy := 5
 	for redundancy > 0 {
 		orderToNetwork <- order
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(20 * time.Millisecond)
 		redundancy--
 	}
 }
