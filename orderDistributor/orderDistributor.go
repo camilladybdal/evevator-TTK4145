@@ -64,7 +64,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 		select {
 		// Order pipeline
 		case order := <-orderIn:
-			if queue[order.Floor].Status >= Confirmed {
+			if queue[order.Floor].Status >= Confirmed && elevatorState.CurrentFloor != order.Floor {
 				if queue[order.Floor].DirectionUp == false && order.DirectionUp == true {
 					elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, true)
 					queue[order.Floor].DirectionUp = true
