@@ -47,7 +47,7 @@ func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork cha
 }
 
 func orderTimer(order Order, timedOut chan<- Order, duration int) {
-
+	order.Timestamp = time.Now().Unix()
 	// Quick fix! NEED TO CHANGE
 	for duration > 0 {
 		//fmt.Println(duration - 1)
@@ -55,6 +55,7 @@ func orderTimer(order Order, timedOut chan<- Order, duration int) {
 		duration--
 	}
 	order.TimedOut = true
+	order.FromId = ElevatorId
 	fmt.Println("*** order timer expired: \t", order.Floor, order.Status)
 	timedOut <- order
 }

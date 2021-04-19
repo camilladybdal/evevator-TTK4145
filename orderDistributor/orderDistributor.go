@@ -46,6 +46,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 		queue[floor].Status = NoActiveOrder
 		queue[floor].TimedOut = false
 		queue[floor].FromId = ElevatorId
+		queue[floor].Timestamp = time.Now().Unix()
 
 		elevio.SetButtonLamp(elevio.BT_HallUp, floor, false)
 		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false)
@@ -80,10 +81,17 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				//fmt.Println("*** expired order invalid: \t", order.Floor)
 				break
 			}
-			if elevatorImmobile && order.CabOrder == false && order.Status != Done {
+			if elevatorImmobile && order.CabOrder == false && order.Status != Done && order.Status != WaitingForCost {
 				fmt.Println("*** Elevator is immobile")
 				break
 			}
+			if order.TimedOut && order.Status != queue[order.Floor].Status {
+				break
+			}
+			if order.Timestamp < queue[order.Floor].Timestamp && order.TimedOut && order.FromId != ElevatorId {
+				break
+			}
+
 			switch order.Status {
 			case NoActiveOrder:
 			case WaitingForCost:
@@ -104,11 +112,8 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					break
 				}
 
-				queue[order.Floor].Status = order.Status
-				if queue[order.Floor].DirectionUp == false {
+				if queue[order.Floor].DirectionUp == false && queue[order.Floor].DirectionDown == false {
 					queue[order.Floor].DirectionUp = order.DirectionUp
-				}
-				if queue[order.Floor].DirectionDown == false {
 					queue[order.Floor].DirectionDown = order.DirectionDown
 				}
 
@@ -117,14 +122,20 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 						queue[order.Floor].Cost[elevator] = order.Cost[elevator] // Sjekke om det ikke oppstår uenigheter
 					}
 				}
-				if queue[order.Floor].Cost[ElevatorId] == MaxCost {
+				if queue[order.Floor].Status != WaitingForCost {
 					fmt.Println("*** adding own cost: \t", order.Floor)
-					queue[order.Floor].Cost[ElevatorId] = Costfunction(elevatorState, order)
-					order.Cost[ElevatorId] = queue[order.Floor].Cost[ElevatorId]
+					if elevatorState.Immobile != true {
+						queue[order.Floor].Cost[ElevatorId] = Costfunction(elevatorState, order)
+						order.Cost[ElevatorId] = queue[order.Floor].Cost[ElevatorId]
+					} else {
+						queue[order.Floor].Cost[ElevatorId] = MaxCost
+						order.Cost[ElevatorId] = MaxCost
+					}
+					
 					go orderBuffer(order, orderToNetworkChannel)
 					go orderTimer(order, orderIn, 1)
 				}
-
+				queue[order.Floor].Status = order.Status
 				allCostsPresent := true
 				fmt.Println("*** costcheck: \t", order.Floor)
 				for elevator := 0; elevator < NumberOfElevators; elevator++ {
@@ -163,7 +174,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					queue[order.Floor].Status = Mine
 					go orderBuffer(queue[order.Floor], orderIn)
 				} else {
-					go orderTimer(queue[order.Floor], orderIn, queue[order.Floor].Cost[orderFindIdWithLowestCost(order)]*3+5)
+					go orderTimer(queue[order.Floor], orderIn, 5)
 				}
 				break
 
@@ -200,9 +211,10 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					break
 				}
 				if queue[order.Floor].Status != Confirmed {
-					go orderTimer(queue[order.Floor], orderIn, order.Cost[orderFindIdWithLowestCost(order)]*3+5)
+					queue[order.Floor].Status = Confirmed
+					go orderTimer(queue[order.Floor], orderIn, order.Cost[orderFindIdWithLowestCost(order)]+DOOR_OPEN_TIME*NumberOfFloors)
 				}
-				queue[order.Floor].Status = order.Status
+				//queue[order.Floor].Status = order.Status
 				 // Må endres til et uttrykk med costen
 				// Hva skjer hvis alle har MaxCost?
 
@@ -251,6 +263,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				order.DirectionDown = false
 				
 				order.TimedOut = false
+				order.Timestamp = time.Now().Unix()
 				for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
 					order.Cost[elevatorNumber] = MaxCost
 				}
@@ -260,7 +273,6 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 		case elevatorState = <- getElevatorState:
 			if elevatorState.Immobile && !elevatorImmobile {
-				fmt.Println("*** DO THING TO MAKE THE QUEUE BE BETTER SEÑOR!")
 				for floor := 0; floor < NumberOfFloors; floor++ {
 					if queue[floor].Status == Mine {
 						//queue[floor].Cost[ElevatorId] = MaxCost
