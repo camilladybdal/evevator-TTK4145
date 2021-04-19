@@ -16,6 +16,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 	emptyQueue(&elevatorInfo)
 
 	elevatorInfo.CurrentFloor = 0
+	wasobstr := false
 	updateFileAndElevator := false
 
 	var QueueDirection elevio.MotorDirection
@@ -29,9 +30,6 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 	var nextFloor int
 	var obstructed bool
 	var immobilityNextFloor int
-
-	var obstructionCounter int
-	obstructionCounter = MAX_DOOR_CLOSE_TRIES
 
 	//read cab-orders from file and add to queues.
 	readFromBackupFile("CabOrders", ElevatorId, &elevatorInfo)
@@ -192,16 +190,21 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 				if obstructed == true {
 					fmt.Println("---- OBSTRUCTION")
-					obstructionCounter--
-					fmt.Println("---- ", obstructionCounter, " tries left!")
+
 					resetDoor <- DOOR_OPEN_TIMER
-				} else {
-					obstructionCounter = MAX_DOOR_CLOSE_TRIES
+					fmt.Println("---- Restarted doortimer")
+
+					if wasobstr == false {
+						fmt.Println("---- started obstruction/immobility timer")
+						go StoppableTimer(MAX_OBSTRUCTION_TIME, 1, channels.StopImmobileTimer, channels.Immobile)
+						wasobstr = true
+					}
 				}
-				if obstructionCounter == 0 {
-					State = IMMOBILE
-					elevatorInfo.Immobile = true
-					obstructionCounter = MAX_DOOR_CLOSE_TRIES
+				if obstructed == false && wasobstr == true {
+					fmt.Println("---- OBSTRUCTION OFF")
+					fmt.Println("---- Stopping immobility timer 1")
+					elevio.SetDoorOpenLamp(false)
+					channels.StopImmobileTimer <- true
 				}
 
 				if checkOrdersPresent(elevatorInfo) == true && obstructed == false {
@@ -230,14 +233,19 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 		case obstructed = <-channels.Obstruction:
 			fmt.Println("---- Obstruction is : ", obstructed)
-			if obstructed == false && State == IMMOBILE {
-				State = DOOROPEN
-				elevatorInfo.Immobile = false
-				resetDoor <- DOOR_OPEN_TIMER
-				fmt.Println("---- Restarted doortimer, no longer obstructed")
-				updateFileAndElevator = true
+			if obstructed == false {
+				wasobstr = false
+				if State == DOOROPEN {
+					channels.StopImmobileTimer <- true
+				}
+				if State == IMMOBILE {
+					State = DOOROPEN
+					elevatorInfo.Immobile = false
+					resetDoor <- DOOR_OPEN_TIMER
+					fmt.Println("---- Restarted doortimer, no longer obstructed")
+				}
+				updateFileAndElevator = false
 			}
-			
 
 		case <-channels.Immobile:
 			fmt.Println("---- IMMOBILITY detected")
