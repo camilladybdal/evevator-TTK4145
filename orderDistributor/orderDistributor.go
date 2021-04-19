@@ -168,7 +168,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					queue[order.Floor].Status = Mine
 					go orderBuffer(queue[order.Floor], orderIn)
 				} else {
-					go orderTimer(queue[order.Floor], orderIn, queue[order.Floor].Cost[orderFindIdWithLowestCost(order)]*3+5)
+					go orderTimer(queue[order.Floor], orderIn, 5)
 				}
 				break
 
@@ -206,7 +206,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 				if queue[order.Floor].Status != Confirmed {
 					queue[order.Floor].Status = Confirmed
-					go orderTimer(queue[order.Floor], orderIn, order.Cost[orderFindIdWithLowestCost(order)]*3+5)
+					go orderTimer(queue[order.Floor], orderIn, order.Cost[orderFindIdWithLowestCost(order)]+DOOR_OPEN_TIME*NumberOfFloors)
 				}
 				//queue[order.Floor].Status = order.Status
 				 // Må endres til et uttrykk med costen
@@ -267,7 +267,6 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 		case elevatorState = <- getElevatorState:
 			if elevatorState.Immobile && !elevatorImmobile {
-				fmt.Println("*** DO THING TO MAKE THE QUEUE BE BETTER SEÑOR!")
 				for floor := 0; floor < NumberOfFloors; floor++ {
 					if queue[floor].Status == Mine {
 						//queue[floor].Cost[ElevatorId] = MaxCost
