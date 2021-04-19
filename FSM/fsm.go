@@ -13,7 +13,6 @@ import (
 func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<- Elevator) {
 	State := IDLE
 	var elevatorInfo Elevator
-	emptyQueue(&elevatorInfo)
 
 	elevatorInfo.CurrentFloor = 0
 	wasobstr := false

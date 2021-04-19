@@ -145,12 +145,6 @@ func removeFromQueue(elevator *Elevator) {
 	elevator.DownQueue[elevator.CurrentFloor] = 0
 }
 
-func emptyQueue(elevator *Elevator) {
-	for floor := 0; floor < NumberOfFloors; floor++ {
-		elevator.UpQueue[floor] = 0
-		elevator.DownQueue[floor] = 0
-	}
-}
 
 ////////////FILE/////////////
 func checkError(e error) {
