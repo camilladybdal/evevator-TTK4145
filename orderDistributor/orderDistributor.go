@@ -24,12 +24,12 @@ func orderDumpQueue(queue *[]Order) {
 }
 */
 
-func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorState <-chan Elevator) {
+func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorState <-chan Elevator, newButtonEvent chan elevio.ButtonEvent) {
 	fmt.Println("*** Starting OrderDistributor...")
 	var queue [NumberOfFloors]Order
-	go pollOrders(orderIn)
+	
 	orderToNetworkChannel := make(chan Order)
-
+	go pollOrders(orderIn, newButtonEvent)
 	go orderNetworkCommunication(orderToNetworkChannel, orderIn)
 
 	var elevatorState Elevator

@@ -10,10 +10,9 @@ import (
 	. "../types"
 )
 
-func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<- Elevator) {
+func RunElevator(channels FsmChannels, OrderUpdate chan<- Order) {
 	State := IDLE
 	var elevatorInfo Elevator
-	emptyQueue(&elevatorInfo)
 
 	elevatorInfo.CurrentFloor = 0
 	updateFileAndElevator := false
@@ -36,10 +35,6 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 	//read cab-orders from file and add to queues.
 	readFromBackupFile("CabOrders", ElevatorId, &elevatorInfo)
 	startupAfterCrash := checkOrdersPresent(elevatorInfo)
-
-	go elevio.PollFloorSensor(channels.FloorReached)
-	go elevio.PollObstructionSwitch(channels.Obstruction)
-	fmt.Println("Polling started...")
 
 	//for select switch case
 	for {
@@ -260,7 +255,7 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 			updateFileAndElevator = false
 
 			writeToBackUpFile("CabOrders", ElevatorId, elevatorInfo)
-			go func() { ElevState <- elevatorInfo }()
+			go func() { channels.ElevatorState <- elevatorInfo }()
 		}
 	}
 }

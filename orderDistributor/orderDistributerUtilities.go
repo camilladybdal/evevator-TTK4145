@@ -66,10 +66,8 @@ func orderBuffer(order Order, bufferTo chan<- Order) {
 	return
 }
 
-func pollOrders(orderIn chan Order) {
-	newButtonEvent := make(chan elevio.ButtonEvent)
-	go elevio.PollButtons(newButtonEvent)
-
+func pollOrders(orderIn chan Order, newButtonEvent <-chan elevio.ButtonEvent) {
+	
 	for {
 		select {
 		case buttonEvent := <-newButtonEvent:

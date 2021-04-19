@@ -25,15 +25,26 @@ func main() {
 	fsmChannels.Immobile = make(chan int)
 	fsmChannels.StopImmobileTimer = make(chan bool)
 
-	//shared channels
+	newButtonEvent := make(chan elevio.ButtonEvent)
 	orderUpdate := make(chan Order)
-	getElevatorState := make(chan Elevator)
+
+	//shared channels
+	
+	//getElevatorState := make(chan Elevator)
 
 	elevio.Init(ElevatorAddress, NumberOfFloors)
+	go elevio.PollFloorSensor(fsmChannels.FloorReached)
+	go elevio.PollObstructionSwitch(fsmChannels.Obstruction)
+	go elevio.PollButtons(newButtonEvent)
+	
+
+
 	InitFSM(NumberOfFloors)
 
-	go OrderDistributor(fsmChannels.NewOrder, orderUpdate, getElevatorState)
-	go RunElevator(fsmChannels, orderUpdate, getElevatorState)
+	go OrderDistributor(fsmChannels.NewOrder, orderUpdate, fsmChannels.ElevatorState, newButtonEvent)
+	
+	
+	go RunElevator(fsmChannels, orderUpdate)
 
 	for {
 		time.Sleep(3 * time.Second)
