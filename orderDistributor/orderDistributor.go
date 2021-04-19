@@ -112,7 +112,6 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					break
 				}
 
-				queue[order.Floor].Status = order.Status
 				if queue[order.Floor].DirectionUp == false && queue[order.Floor].DirectionDown == false {
 					queue[order.Floor].DirectionUp = order.DirectionUp
 					queue[order.Floor].DirectionDown = order.DirectionDown
@@ -123,14 +122,14 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 						queue[order.Floor].Cost[elevator] = order.Cost[elevator] // Sjekke om det ikke oppstår uenigheter
 					}
 				}
-				if queue[order.Floor].Cost[ElevatorId] == MaxCost {
+				if queue[order.Floor].Status != WaitingForCost {
 					fmt.Println("*** adding own cost: \t", order.Floor)
 					queue[order.Floor].Cost[ElevatorId] = Costfunction(elevatorState, order)
 					order.Cost[ElevatorId] = queue[order.Floor].Cost[ElevatorId]
 					go orderBuffer(order, orderToNetworkChannel)
 					go orderTimer(order, orderIn, 1)
 				}
-
+				queue[order.Floor].Status = order.Status
 				allCostsPresent := true
 				fmt.Println("*** costcheck: \t", order.Floor)
 				for elevator := 0; elevator < NumberOfElevators; elevator++ {
@@ -206,9 +205,10 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					break
 				}
 				if queue[order.Floor].Status != Confirmed {
+					queue[order.Floor].Status = Confirmed
 					go orderTimer(queue[order.Floor], orderIn, order.Cost[orderFindIdWithLowestCost(order)]*3+5)
 				}
-				queue[order.Floor].Status = order.Status
+				//queue[order.Floor].Status = order.Status
 				 // Må endres til et uttrykk med costen
 				// Hva skjer hvis alle har MaxCost?
 
