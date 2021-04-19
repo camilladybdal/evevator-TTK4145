@@ -5,7 +5,6 @@ import (
 	"fmt"
 	. "../config"
 	"../elevio"
-	"../network/bcast"
 	. "../types"
 	//. "../costfnc"
 )
@@ -18,14 +17,8 @@ func orderNetworkResending(order Order, orderToNetwork chan<- Order) {
 	}
 }
 
-func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork chan<- Order) {
-	port := Port
-	networkTransmit := make(chan Order)
-	networkRecieve := make(chan Order)
-
-	go bcast.Transmitter(port, networkTransmit)
-	go bcast.Receiver(port, networkRecieve)
-
+func orderNetworkCommunication(orderToTransmitter chan<- Order, orderFromReciever <-chan Order, orderToNetwork <-chan Order, orderFromNetwork chan<- Order) {
+	
 	for {
 		select {
 		case order := <-orderToNetwork:
@@ -33,9 +26,12 @@ func orderNetworkCommunication(orderToNetwork <-chan Order, orderFromNetwork cha
 			order.FromId = ElevatorId
 			order.CabOrder = false
 			
-			go orderNetworkResending(order, networkTransmit)
+			go orderNetworkResending(order, orderToTransmitter)
+			if order.FromId == ElevatorId {
+				break
+			}
 
-		case order := <-networkRecieve:
+		case order := <-orderFromReciever:
 			if order.FromId == ElevatorId {
 				//fmt.Println("*** read own order from network")
 				break

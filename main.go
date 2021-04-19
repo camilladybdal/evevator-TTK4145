@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"time"
-
+	"./network/bcast"
 	. "./config"
 	"./elevio"
 	. "./fsm"
@@ -28,6 +28,9 @@ func main() {
 	newButtonEvent := make(chan elevio.ButtonEvent)
 	orderUpdate := make(chan Order)
 
+	networkTransmit := make(chan Order)
+	networkRecieve := make(chan Order)
+
 	//shared channels
 	
 	//getElevatorState := make(chan Elevator)
@@ -36,12 +39,15 @@ func main() {
 	go elevio.PollFloorSensor(fsmChannels.FloorReached)
 	go elevio.PollObstructionSwitch(fsmChannels.Obstruction)
 	go elevio.PollButtons(newButtonEvent)
+
+	go bcast.Transmitter(Port, networkTransmit)
+	go bcast.Receiver(Port, networkRecieve)
 	
 
 
 	InitFSM(NumberOfFloors)
 
-	go OrderDistributor(fsmChannels.NewOrder, orderUpdate, fsmChannels.ElevatorState, newButtonEvent)
+	go OrderDistributor(fsmChannels.NewOrder, orderUpdate, fsmChannels.ElevatorState, newButtonEvent, networkTransmit, networkRecieve)
 	
 	
 	go RunElevator(fsmChannels, orderUpdate)
