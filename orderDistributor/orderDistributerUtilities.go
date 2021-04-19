@@ -85,6 +85,7 @@ func pollOrders(orderIn chan Order) {
 			}
 			newOrder.Status = WaitingForCost
 			newOrder.TimedOut = false
+			newOrder.Timestamp = time.Now().Unix()
 			go orderBuffer(newOrder, orderIn)
 		}
 	}
