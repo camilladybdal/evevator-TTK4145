@@ -25,11 +25,12 @@ func main() {
 	fsmChannels.Immobile = make(chan int)
 	fsmChannels.StopImmobileTimer = make(chan bool)
 
-	newButtonEvent := make(chan elevio.ButtonEvent)
-	orderUpdate := make(chan Order)
-
-	networkTransmit := make(chan Order)
-	networkRecieve := make(chan Order)
+	// OrderDistributor channels
+	var orderDistributorChannels OrderDistributorChannels
+	orderDistributorChannels.NewButtonEvent = make(chan elevio.ButtonEvent)
+	orderDistributorChannels.OrderUpdate = make(chan Order)
+	orderDistributorChannels.OrderTransmitter = make(chan Order)
+	orderDistributorChannels.OrderReciever = make(chan Order)
 
 	//shared channels
 	
@@ -38,19 +39,17 @@ func main() {
 	elevio.Init(ElevatorAddress, NumberOfFloors)
 	go elevio.PollFloorSensor(fsmChannels.FloorReached)
 	go elevio.PollObstructionSwitch(fsmChannels.Obstruction)
-	go elevio.PollButtons(newButtonEvent)
+	go elevio.PollButtons(orderDistributorChannels.NewButtonEvent)
 
-	go bcast.Transmitter(Port, networkTransmit)
-	go bcast.Receiver(Port, networkRecieve)
+	go bcast.Transmitter(Port, orderDistributorChannels.OrderTransmitter)
+	go bcast.Receiver(Port, orderDistributorChannels.OrderReciever)
 	
-
-
 	InitFSM(NumberOfFloors)
 
-	go OrderDistributor(fsmChannels.NewOrder, orderUpdate, fsmChannels.ElevatorState, newButtonEvent, networkTransmit, networkRecieve)
+	//go OrderDistributor(fsmChannels.NewOrder, orderUpdate, fsmChannels.ElevatorState, newButtonEvent, networkTransmit, networkRecieve)
+	go OrderDistributor(orderDistributorChannels, fsmChannels.NewOrder, fsmChannels.ElevatorState)
 	
-	
-	go RunElevator(fsmChannels, orderUpdate)
+	go RunElevator(fsmChannels, orderDistributorChannels.OrderUpdate)
 
 	for {
 		time.Sleep(3 * time.Second)

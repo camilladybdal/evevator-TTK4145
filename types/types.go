@@ -59,4 +59,11 @@ type FsmChannels struct {
 	Immobile 		chan int
 	StopImmobileTimer chan bool
 }
+	
+type OrderDistributorChannels struct {
+	OrderUpdate		chan Order
+	NewButtonEvent 	chan elevio.ButtonEvent
+	OrderTransmitter chan Order
+	OrderReciever 	chan Order
 
+}

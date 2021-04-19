@@ -24,13 +24,13 @@ func orderDumpQueue(queue *[]Order) {
 }
 */
 
-func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorState <-chan Elevator, newButtonEvent chan elevio.ButtonEvent, networkTransmit chan Order, networkRecieve <-chan Order) {
+func OrderDistributor(channels OrderDistributorChannels, orderOut chan<- Order, getElevatorState <-chan Elevator) {
 	fmt.Println("*** Starting OrderDistributor...")
 	var queue [NumberOfFloors]Order
 	
 	orderToNetwork := make(chan Order)
-	go pollOrders(orderIn, newButtonEvent)
-	go orderNetworkCommunication(networkTransmit, networkRecieve, orderToNetwork, orderIn)
+	go pollOrders(channels.OrderUpdate, channels.NewButtonEvent)
+	go orderNetworkCommunication(channels.OrderTransmitter, channels.OrderReciever, orderToNetwork, channels.OrderUpdate)
 
 	var elevatorState Elevator
 	var elevatorImmobile bool
@@ -52,19 +52,19 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false)
 	}
 
-	// For handling deadlock in orderIn
+	// For handling deadlock in channels.OrderUpdate
 	startDraining := make(chan bool)
 	refreshTimer := make(chan time.Duration)
 	resetTime := time.Duration(10)
 	go timer.ResetableTimer(resetTime, refreshTimer, startDraining)
-	go drainChannels(orderIn, startDraining)
+	go drainChannels(channels.OrderUpdate, startDraining)
 
 	for {
 		refreshTimer <- resetTime
 		
 		select {
 		// Order pipeline
-		case order := <-orderIn:
+		case order := <-channels.OrderUpdate:
 
 			if queue[order.Floor].Status >= Confirmed && elevatorState.CurrentFloor != order.Floor {
 				if queue[order.Floor].DirectionUp == false && order.DirectionUp == true {
@@ -134,7 +134,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					}
 					
 					go orderBuffer(order, orderToNetwork)
-					go orderTimer(order, orderIn, 1)
+					go orderTimer(order, channels.OrderUpdate, 1)
 				}
 				queue[order.Floor].Status = order.Status
 				allCostsPresent := true
@@ -148,7 +148,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 				if allCostsPresent || order.TimedOut {
 					queue[order.Floor].Status = Unconfirmed
-					go orderBuffer(queue[order.Floor], orderIn)
+					go orderBuffer(queue[order.Floor], channels.OrderUpdate)
 					//go orderBuffer(queue[order.Floor], orderToNetwork)
 					// Linjen over er kun redundancy, legg til hvis det ser ut som om det kan være et problem
 				}
@@ -161,7 +161,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 				if order.TimedOut == true {
 					queue[order.Floor].Cost[orderFindIdWithLowestCost(order)] = MaxCost
-					go orderBuffer(queue[order.Floor], orderIn)
+					go orderBuffer(queue[order.Floor], channels.OrderUpdate)
 					break
 				}
 
@@ -173,9 +173,9 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 						go orderBuffer(order, orderToNetwork)
 					}
 					queue[order.Floor].Status = Mine
-					go orderBuffer(queue[order.Floor], orderIn)
+					go orderBuffer(queue[order.Floor], channels.OrderUpdate)
 				} else {
-					go orderTimer(queue[order.Floor], orderIn, 5)
+					go orderTimer(queue[order.Floor], channels.OrderUpdate, 5)
 				}
 				break
 
@@ -208,12 +208,12 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					*/
 					queue[order.Floor].Status = Unconfirmed
 					order.Status = Unconfirmed
-					go orderBuffer(order, orderIn)
+					go orderBuffer(order, channels.OrderUpdate)
 					break
 				}
 				if queue[order.Floor].Status != Confirmed {
 					queue[order.Floor].Status = Confirmed
-					go orderTimer(queue[order.Floor], orderIn, order.Cost[orderFindIdWithLowestCost(order)]+DOOR_OPEN_TIME*NumberOfFloors)
+					go orderTimer(queue[order.Floor], channels.OrderUpdate, order.Cost[orderFindIdWithLowestCost(order)]+DOOR_OPEN_TIME*NumberOfFloors)
 				}
 				//queue[order.Floor].Status = order.Status
 				 // Må endres til et uttrykk med costen
@@ -246,7 +246,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 				go orderBuffer(queue[order.Floor], orderOut)
 				fmt.Println("*** ORDER SENT TO FSM: \t", order.Floor)
-				go orderTimer(order, orderIn, order.Cost[ElevatorId]*3+5)
+				go orderTimer(order, channels.OrderUpdate, order.Cost[ElevatorId]*3+5)
 				break
 
 			case Done:
