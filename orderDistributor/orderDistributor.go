@@ -46,6 +46,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 		queue[floor].Status = NoActiveOrder
 		queue[floor].TimedOut = false
 		queue[floor].FromId = ElevatorId
+		queue[floor].Timestamp = time.Now().Unix()
 
 		elevio.SetButtonLamp(elevio.BT_HallUp, floor, false)
 		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false)
@@ -84,6 +85,13 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				fmt.Println("*** Elevator is immobile")
 				break
 			}
+			if order.TimedOut && order.Status != queue[order.Floor].Status {
+				break
+			}
+			if order.Timestamp < queue[order.Floor].Timestamp && order.TimedOut && order.FromId != ElevatorId {
+				break
+			}
+
 			switch order.Status {
 			case NoActiveOrder:
 			case WaitingForCost:
@@ -251,6 +259,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				order.DirectionDown = false
 				
 				order.TimedOut = false
+				order.Timestamp = time.Now().Unix()
 				for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
 					order.Cost[elevatorNumber] = MaxCost
 				}

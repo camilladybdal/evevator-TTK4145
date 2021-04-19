@@ -55,6 +55,7 @@ func orderTimer(order Order, timedOut chan<- Order, duration int) {
 		duration--
 	}
 	order.TimedOut = true
+	order.FromId = ElevatorId
 	fmt.Println("*** order timer expired: \t", order.Floor, order.Status)
 	timedOut <- order
 }
