@@ -18,6 +18,8 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 	elevatorInfo.CurrentFloor = 0
 	wasobstr := false
 	updateFileAndElevator := false
+	startedObstructionTimer := false
+
 
 	var QueueDirection elevio.MotorDirection
 	QueueDirection = elevio.MD_Stop
@@ -53,9 +55,13 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 					elevio.SetDoorOpenLamp(true)
 					resetDoor <- DOOR_OPEN_TIMER
+					fmt.Println("im here 1")
 					fmt.Println("---- Started Doortimer")
 
 					expidizeOrder(elevatorInfo, OrderUpdate)
+					
+					
+					/*FOR TESTING PURPOSES*/
 
 					State = DOOROPEN
 
@@ -92,6 +98,9 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					//Reset this timer, dont start a new
 					resetDoor <- DOOR_OPEN_TIMER
 					fmt.Println(" ---- Started Doortimer")
+
+
+					fmt.Println("im here 2")
 					removeFromQueue(&elevatorInfo)
 
 					expidizeOrder(elevatorInfo, OrderUpdate)
@@ -194,10 +203,13 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 					resetDoor <- DOOR_OPEN_TIMER
 					fmt.Println("---- Restarted doortimer")
 
+					fmt.Println("wasobstr is : ", wasobstr)
+
 					if wasobstr == false {
 						fmt.Println("---- started obstruction/immobility timer")
 						go StoppableTimer(MAX_OBSTRUCTION_TIME, 1, channels.StopImmobileTimer, channels.Immobile)
 						wasobstr = true
+						startedObstructionTimer = true
 					}
 				}
 				if obstructed == false && wasobstr == true {
@@ -233,10 +245,12 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 
 		case obstructed = <-channels.Obstruction:
 			fmt.Println("---- Obstruction is : ", obstructed)
+			
 			if obstructed == false {
 				wasobstr = false
-				if State == DOOROPEN {
+				if State == DOOROPEN && startedObstructionTimer == true{
 					channels.StopImmobileTimer <- true
+					startedObstructionTimer = false
 				}
 				if State == IMMOBILE {
 					State = DOOROPEN
@@ -254,8 +268,11 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order, ElevState chan<
 			elevatorInfo.Immobile = true
 			State = IMMOBILE
 			updateFileAndElevator = true
+			startedObstructionTimer = false
 			immobilityNextFloor = nextFloor
 			fmt.Println("immobilitynextfloor is: ", immobilityNextFloor)
+
+
 
 		default:
 			if startupAfterCrash == true {
