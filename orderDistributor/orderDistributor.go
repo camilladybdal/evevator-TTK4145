@@ -46,6 +46,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 		queue[floor].Status = NoActiveOrder
 		queue[floor].TimedOut = false
 		queue[floor].FromId = ElevatorId
+		queue[floor].Timestamp = time.Now().Unix()
 
 		elevio.SetButtonLamp(elevio.BT_HallUp, floor, false)
 		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false)
@@ -76,8 +77,9 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					go orderBuffer(order, orderToNetworkChannel)
 				}
 			}
-			if queue[order.Floor].Status == NoActiveOrder && order.TimedOut {
+			if order.TimedOut && order.Timestamp < queue[order.Floor].Timestamp {
 				//fmt.Println("*** expired order invalid: \t", order.Floor)
+				fmt.Println("************* order timed out after DONE-------")
 				break
 			}
 			if elevatorImmobile && order.CabOrder == false && order.Status != Done {
@@ -251,6 +253,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				order.DirectionDown = false
 				
 				order.TimedOut = false
+				order.Timestamp = time.Now().Unix()
 				for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
 					order.Cost[elevatorNumber] = MaxCost
 				}
