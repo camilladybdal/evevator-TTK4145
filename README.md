@@ -1,5 +1,4 @@
 # Multiple elevator project - TTK4145
-==========================================
 
 ### Summary of project
 
