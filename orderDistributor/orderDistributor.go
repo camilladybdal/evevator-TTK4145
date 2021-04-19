@@ -77,7 +77,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 					go orderBuffer(order, orderToNetworkChannel)
 				}
 			}
-			if order.TimedOut && order.Timestamp < queue[order.Floor].Timestamp {
+			if order.Timestamp < queue[order.Floor].Timestamp {
 				//fmt.Println("*** expired order invalid: \t", order.Floor)
 				fmt.Println("************* order timed out after DONE-------")
 				break
