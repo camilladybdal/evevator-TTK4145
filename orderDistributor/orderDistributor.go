@@ -238,6 +238,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 
 			case Done:
 				fmt.Println("****** ORDER DONE: \t", order.Floor)
+				order.Timestamp = time.Now().Unix()
 				if order.FromId == ElevatorId {
 					go orderBuffer(order, orderToNetworkChannel)
 					elevio.SetButtonLamp(elevio.BT_Cab, order.Floor, false)
@@ -251,7 +252,6 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				order.DirectionDown = false
 				
 				order.TimedOut = false
-				order.Timestamp = time.Now().Unix()
 				for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
 					order.Cost[elevatorNumber] = MaxCost
 				}
