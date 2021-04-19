@@ -107,10 +107,8 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 
 				queue[order.Floor].Status = order.Status
-				if queue[order.Floor].DirectionUp == false {
+				if queue[order.Floor].DirectionUp == false && queue[order.Floor].DirectionDown == false {
 					queue[order.Floor].DirectionUp = order.DirectionUp
-				}
-				if queue[order.Floor].DirectionDown == false {
 					queue[order.Floor].DirectionDown = order.DirectionDown
 				}
 
