@@ -81,7 +81,7 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				//fmt.Println("*** expired order invalid: \t", order.Floor)
 				break
 			}
-			if elevatorImmobile && order.CabOrder == false && order.Status != Done {
+			if elevatorImmobile && order.CabOrder == false && order.Status != Done && order.Status != WaitingForCost {
 				fmt.Println("*** Elevator is immobile")
 				break
 			}
@@ -124,8 +124,14 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				}
 				if queue[order.Floor].Status != WaitingForCost {
 					fmt.Println("*** adding own cost: \t", order.Floor)
-					queue[order.Floor].Cost[ElevatorId] = Costfunction(elevatorState, order)
-					order.Cost[ElevatorId] = queue[order.Floor].Cost[ElevatorId]
+					if elevatorState.Immobile != true {
+						queue[order.Floor].Cost[ElevatorId] = Costfunction(elevatorState, order)
+						order.Cost[ElevatorId] = queue[order.Floor].Cost[ElevatorId]
+					} else {
+						queue[order.Floor].Cost[ElevatorId] = MaxCost
+						order.Cost[ElevatorId] = MaxCost
+					}
+					
 					go orderBuffer(order, orderToNetworkChannel)
 					go orderTimer(order, orderIn, 1)
 				}
