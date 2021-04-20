@@ -8,7 +8,7 @@ import (
 	"../elevio"
 	"../timer"
 
-	. "../costfnc"
+	. "../costfunction"
 	. "../types"
 )
 

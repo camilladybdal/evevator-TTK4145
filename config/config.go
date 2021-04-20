@@ -7,7 +7,7 @@ const (
 	PORT                = 16569
 	NUMBER_OF_ELEVATORS = 3
 	NUMBER_OF_FLOORS    = 4
-	ELEVATOR_ID         = 0
+	ELEVATOR_ID         = 1
 	ELEVATOR_ADDRESS    = "localhost:15657"
 
 	/*Constants*/

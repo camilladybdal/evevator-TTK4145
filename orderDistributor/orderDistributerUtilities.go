@@ -94,7 +94,6 @@ func findIdWithLowestCost(order Order) int {
 	return lowestCostId
 }
 
-// ???
 func drainChannels(orderIn chan Order, startDraining <-chan bool) {
 	drain := false
 	for {
@@ -103,7 +102,7 @@ func drainChannels(orderIn chan Order, startDraining <-chan bool) {
 
 		}
 		if drain == true {
-			fmt.Println("*** DRAINING!!!------------------------------------------------------------------")
+			fmt.Println("*** DRAINING!!!---------------")
 			select {
 			case <-orderIn:
 			}
