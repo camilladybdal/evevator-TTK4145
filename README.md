@@ -10,10 +10,10 @@ The OrderDistributer is the module that handles the interaction between the elev
 
 ### Module overview
 
+Here you will find some informal UML. The state diagram shows how our four states interact in the FSM, and the module-diagram shows which modules we have and what they consist of. 
+
+![picture](designDiagrams/Informal_class_diagram.png)
 ![picture](designDiagrams/State_diagram.png)
-![picture](designDiagrams/Informal_class_diagram)
-
-
 
 
 ### Loaned code
