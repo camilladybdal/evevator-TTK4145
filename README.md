@@ -10,8 +10,10 @@ The OrderDistributer is the module that handles the interaction between the elev
 
 ### Module overview
 
-+ ADD STATE-DIAGRAM HERE
-+ ADD MODULE DIAGRAM HERE
+![picture](sanntid/State_diagram.png)
+![picture](sanntid/Informal_class_diagram)
+
+
 
 
 ### Loaned code
