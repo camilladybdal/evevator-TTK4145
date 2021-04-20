@@ -85,6 +85,12 @@ func RunElevator(channels FsmChannels, OrderUpdate chan<- Order) {
 
 				}
 			case IMMOBILE:
+				if newOrder.CabOrder == true{
+					fmt.Println("hei")
+					readFromBackupFile("CabOrders", ELEVATOR_ID, &elevatorInfo)
+					addToQueue(&elevatorInfo, newOrder) 
+					writeToBackUpFile("CabOrders", ELEVATOR_ID, elevatorInfo)
+				}
 			}
 
 		case floorArrival := <-channels.FloorReached:
