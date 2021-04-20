@@ -1,26 +1,19 @@
 package costfnc
 
 import (
-	"fmt"
-
+	. "../config"
 	. "../elevio"
 	. "../types"
-	. "../config"
 )
 
-//Based on minimal waiting time
-func Costfunction(elev Elevator, neworder Order) int {
+func Costfunction(elevator Elevator, neworder Order) int {
 	cost := 0
-	lastFloor := elev.CurrentFloor
-	movement := getMovementList(elev, neworder)
-	fmt.Println("Movement: ", movement)
-	for i := 0; i < len(movement); i++ {
+	lastFloor := elevator.CurrentFloor
+	movementList := getMovementList(elevator, neworder)
+	for i := 0; i < len(movementList); i++ {
 		cost += DOOR_OPEN_TIME
-		cost += TRAVEL_TIME * abs(lastFloor-movement[i])
-		lastFloor = movement[i]
-		fmt.Println("Last_floor: ", lastFloor)
-		fmt.Println("Current floor: ", movement[i])
-		fmt.Println("Cost: ", cost)
+		cost += TRAVEL_TIME * abs(lastFloor-movementList[i])
+		lastFloor = movementList[i]
 	}
 	return cost
 }
@@ -33,67 +26,65 @@ func abs(value int) int {
 	return value
 }
 
-//Only know queuedir
-func getMovementList(elev Elevator, neworder Order) []int {
-	var movement []int
-	if elev.Direction == MD_Down {
-		for i := elev.CurrentFloor; i >= 0; i-- { //Search downqueue for orders from current to bottom, if order in downqueue: + DOOROPENTIME + TRAVELTIME
+func getMovementList(elevator Elevator, neworder Order) []int {
+	var movementList []int
+	if elevator.Direction == MD_Down {
+		for i := elevator.CurrentFloor; i >= 0; i-- {
 			if i == neworder.Floor && neworder.DirectionDown == true {
-				movement = append(movement, neworder.Floor)
-				return movement
+				movementList = append(movementList, neworder.Floor)
+				return movementList
 			}
-			if elev.DownQueue[i] == 1 {
-				movement = append(movement, i)
+			if elevator.DownQueue[i] == 1 {
+				movementList = append(movementList, i)
 			}
 		}
-		for i := 0; i < NumberOfFloors; i++ { //Search upqueue for orders, if order in upqueue: + DOOROPENTIME + TRAVELTIME
+		for i := 0; i < NUMBER_OF_FLOORS; i++ {
 			if i == neworder.Floor && neworder.DirectionUp == true {
-				movement = append(movement, neworder.Floor)
-				return movement
+				movementList = append(movementList, neworder.Floor)
+				return movementList
 			}
-			if elev.UpQueue[i] == 1 && elev.DownQueue[i] != 1 {
-				movement = append(movement, i)
+			if elevator.UpQueue[i] == 1 && elevator.DownQueue[i] != 1 {
+				movementList = append(movementList, i)
 			}
 		}
-		for i := NumberOfFloors - 1; i < elev.CurrentFloor; i-- { //Search downqueue for orders from top to current
+		for i := NUMBER_OF_FLOORS - 1; i < elevator.CurrentFloor; i-- {
 			if i == neworder.Floor && neworder.DirectionDown == true {
-				movement = append(movement, neworder.Floor)
-				return movement
+				movementList = append(movementList, neworder.Floor)
+				return movementList
 			}
-			if elev.DownQueue[i] == 1 {
-				movement = append(movement, i)
+			if elevator.DownQueue[i] == 1 {
+				movementList = append(movementList, i)
 			}
 		}
-	} else if elev.Direction == MD_Up {
-		for i := elev.CurrentFloor; i < NumberOfFloors; i++ { //Search upqueue for orders from current floor
+	} else if elevator.Direction == MD_Up {
+		for i := elevator.CurrentFloor; i < NUMBER_OF_FLOORS; i++ {
 			if i == neworder.Floor && neworder.DirectionUp == true {
-				movement = append(movement, neworder.Floor)
-				return movement
+				movementList = append(movementList, neworder.Floor)
+				return movementList
 			}
-			if elev.UpQueue[i] == 1 {
-				movement = append(movement, i)
+			if elevator.UpQueue[i] == 1 {
+				movementList = append(movementList, i)
 			}
 		}
-		for i := NumberOfFloors - 1; i >= 0; i-- { //Search downqueue for orders
+		for i := NUMBER_OF_FLOORS - 1; i >= 0; i-- {
 			if i == neworder.Floor && neworder.DirectionDown == true {
-				movement = append(movement, neworder.Floor)
-				return movement
+				movementList = append(movementList, neworder.Floor)
+				return movementList
 			}
-			if elev.DownQueue[i] == 1 && elev.UpQueue[i] != 1 { //Assume that everyone leaves/enters at a floor
-				movement = append(movement, i)
+			if elevator.DownQueue[i] == 1 && elevator.UpQueue[i] != 1 {
+				movementList = append(movementList, i)
 			}
 		}
-		for i := 0; i < elev.CurrentFloor; i++ { //Search upqueue for orders from bottom to current
+		for i := 0; i < elevator.CurrentFloor; i++ {
 			if i == neworder.Floor && neworder.DirectionUp == true {
-				movement = append(movement, neworder.Floor)
-				return movement
+				movementList = append(movementList, neworder.Floor)
+				return movementList
 			}
-			if elev.UpQueue[i] == 1 { //Assume everyone leaves/enters elev at a floor
-				movement = append(movement, i)
+			if elevator.UpQueue[i] == 1 {
+				movementList = append(movementList, i)
 			}
 		}
 	}
-	//What if elev has direction stop?
-	movement = append(movement, neworder.Floor)
-	return movement
+	movementList = append(movementList, neworder.Floor)
+	return movementList
 }
