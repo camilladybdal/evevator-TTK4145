@@ -3,224 +3,206 @@ package orderDistributor
 import (
 	"fmt"
 	"time"
-	"../timer"
+
 	. "../config"
 	"../elevio"
-	//"../network/bcast"
-	. "../types"
+	"../timer"
+
 	. "../costfnc"
+	. "../types"
 )
 
-
-
-//func orderDumpQueue(queue *[]Order) {}
-
-
-/*
-func orderDumpQueue(queue *[]Order) {
-	for floor := 0; floor < NumberOfFloors; floor++ {
-
-	}
-}
-*/
-
-func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorState <-chan Elevator) {
+func OrderDistributor(channels OrderDistributorChannels, orderOut chan<- Order, getElevatorState <-chan Elevator) {
 	fmt.Println("*** Starting OrderDistributor...")
-	var queue [NumberOfFloors]Order
-	go pollOrders(orderIn)
-	orderToNetworkChannel := make(chan Order)
+	var allOrders [NUMBER_OF_FLOORS]Order
 
-	go orderNetworkCommunication(orderToNetworkChannel, orderIn)
+	orderToPeers := make(chan Order)
+	go pollOrders(channels.OrderUpdate, channels.NewButtonEvent)
+	go orderCommunication(channels.OrderTransmitter, channels.OrderReciever, orderToPeers, channels.OrderUpdate)
 
 	var elevatorState Elevator
-	var elevatorImmobile bool
+	var elevatorIsImmobile bool
 
-	for floor := 0; floor < NumberOfFloors; floor++ {
-		queue[floor].Floor = floor
-		queue[floor].DirectionUp = false
-		queue[floor].DirectionDown = false
-		queue[floor].CabOrder = false
-		for elevator := 0; elevator < NumberOfElevators; elevator++ {
-			queue[floor].Cost[elevator] = MaxCost
+	for floor := 0; floor < NUMBER_OF_FLOORS; floor++ {
+		allOrders[floor].Floor = floor
+		allOrders[floor].DirectionUp = false
+		allOrders[floor].DirectionDown = false
+		allOrders[floor].CabOrder = false
+		for elevator := 0; elevator < NUMBER_OF_ELEVATORS; elevator++ {
+			allOrders[floor].Cost[elevator] = MAXCOST
 		}
-		queue[floor].Status = NoActiveOrder
-		queue[floor].TimedOut = false
-		queue[floor].FromId = ElevatorId
-		queue[floor].Timestamp = time.Now().Unix()
+		allOrders[floor].Status = NotActive
+		allOrders[floor].TimedOut = false
+		allOrders[floor].FromId = ELEVATOR_ID
+		allOrders[floor].Timestamp = time.Now().Unix()
 
 		elevio.SetButtonLamp(elevio.BT_HallUp, floor, false)
 		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false)
 	}
 
-	// For handling deadlock in orderIn
+	// Will clear deadlock in channels.OrderUpdate
 	startDraining := make(chan bool)
 	refreshTimer := make(chan time.Duration)
 	resetTime := time.Duration(10)
 	go timer.ResetableTimer(resetTime, refreshTimer, startDraining)
-	go drainChannels(orderIn, startDraining)
+	go drainChannels(channels.OrderUpdate, startDraining)
 
 	for {
 		refreshTimer <- resetTime
-		
+
 		select {
-		// Order pipeline
-		case order := <-orderIn:
-			if queue[order.Floor].Status >= Confirmed && elevatorState.CurrentFloor != order.Floor {
-				if queue[order.Floor].DirectionUp == false && order.DirectionUp == true {
+		case order := <-channels.OrderUpdate:
+
+			/* Turns on hall light if there already is an order in the opposite direction */
+			if allOrders[order.Floor].Status >= Confirmed && elevatorState.CurrentFloor != order.Floor {
+				if allOrders[order.Floor].DirectionUp == false && order.DirectionUp == true {
 					elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, true)
-					queue[order.Floor].DirectionUp = true
-					go orderBuffer(order, orderToNetworkChannel)
+					allOrders[order.Floor].DirectionUp = true
+					go orderBuffer(order, orderToPeers)
 				}
-				if queue[order.Floor].DirectionDown == false && order.DirectionDown == true {
+				if allOrders[order.Floor].DirectionDown == false && order.DirectionDown == true {
 					elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, true)
-					queue[order.Floor].DirectionDown = true
-					go orderBuffer(order, orderToNetworkChannel)
+					allOrders[order.Floor].DirectionDown = true
+					go orderBuffer(order, orderToPeers)
 				}
 			}
-			if queue[order.Floor].Status == NoActiveOrder && order.TimedOut {
-				//fmt.Println("*** expired order invalid: \t", order.Floor)
+
+			/* Disregards orders that time out after completion, or are otherwise not wanted to treat */
+			if allOrders[order.Floor].Status == NotActive && order.TimedOut {
 				break
 			}
-			if elevatorImmobile && order.CabOrder == false && order.Status != Done && order.Status != WaitingForCost {
-				fmt.Println("*** Elevator is immobile")
+			if elevatorIsImmobile && order.CabOrder == false && order.Status != Done && order.Status != WaitingForCost {
 				break
 			}
-			if order.TimedOut && order.Status != queue[order.Floor].Status {
+			if order.TimedOut && order.Status != allOrders[order.Floor].Status {
 				break
 			}
-			if order.Timestamp < queue[order.Floor].Timestamp && order.TimedOut && order.FromId != ElevatorId {
+			if order.Timestamp < allOrders[order.Floor].Timestamp && order.TimedOut && order.FromId != ELEVATOR_ID {
 				break
 			}
 
 			switch order.Status {
-			case NoActiveOrder:
+			case NotActive:
 			case WaitingForCost:
 				fmt.Println("*** STATUS waiting for cost: \t", order.Floor)
- 
+
 				if order.CabOrder == true {
 					elevio.SetButtonLamp(elevio.BT_Cab, order.Floor, true)
-					if queue[order.Floor].CabOrder == false {
-						queue[order.Floor].CabOrder = true
+					if allOrders[order.Floor].CabOrder == false {
+						allOrders[order.Floor].CabOrder = true
 						fmt.Println("*** sent caborder to FSM")
 						go orderBuffer(order, orderOut)
 					}
 					break
 				}
 
-				if queue[order.Floor].Status > WaitingForCost {
-					fmt.Println("*** at higher status: \t", order.Floor, queue[order.Floor].Status)
+				if allOrders[order.Floor].Status > WaitingForCost {
+					fmt.Println("*** at higher status: \t", order.Floor, allOrders[order.Floor].Status)
 					break
 				}
 
-				if queue[order.Floor].DirectionUp == false && queue[order.Floor].DirectionDown == false {
-					queue[order.Floor].DirectionUp = order.DirectionUp
-					queue[order.Floor].DirectionDown = order.DirectionDown
+				if allOrders[order.Floor].DirectionUp == false && allOrders[order.Floor].DirectionDown == false {
+					allOrders[order.Floor].DirectionUp = order.DirectionUp
+					allOrders[order.Floor].DirectionDown = order.DirectionDown
 				}
 
-				for elevator := 0; elevator < NumberOfElevators; elevator++ {
-					if order.Cost[elevator] != MaxCost {
-						queue[order.Floor].Cost[elevator] = order.Cost[elevator] // Sjekke om det ikke oppstår uenigheter
+				for elevator := 0; elevator < NUMBER_OF_ELEVATORS; elevator++ {
+					if order.Cost[elevator] != MAXCOST {
+						allOrders[order.Floor].Cost[elevator] = order.Cost[elevator]
 					}
 				}
-				if queue[order.Floor].Status != WaitingForCost {
+
+				if allOrders[order.Floor].Status != WaitingForCost {
 					fmt.Println("*** adding own cost: \t", order.Floor)
 					if elevatorState.Immobile != true {
-						queue[order.Floor].Cost[ElevatorId] = Costfunction(elevatorState, order)
-						order.Cost[ElevatorId] = queue[order.Floor].Cost[ElevatorId]
+						allOrders[order.Floor].Cost[ELEVATOR_ID] = Costfunction(elevatorState, order)
+						order.Cost[ELEVATOR_ID] = allOrders[order.Floor].Cost[ELEVATOR_ID]
 					} else {
-						queue[order.Floor].Cost[ElevatorId] = MaxCost
-						order.Cost[ElevatorId] = MaxCost
+						allOrders[order.Floor].Cost[ELEVATOR_ID] = MAXCOST
+						order.Cost[ELEVATOR_ID] = MAXCOST
 					}
-					
-					go orderBuffer(order, orderToNetworkChannel)
-					go orderTimer(order, orderIn, 1)
+
+					go orderBuffer(order, orderToPeers)
+					go timingOrder(order, channels.OrderUpdate, 1)
 				}
-				queue[order.Floor].Status = order.Status
+
+				allOrders[order.Floor].Status = order.Status
 				allCostsPresent := true
 				fmt.Println("*** costcheck: \t", order.Floor)
-				for elevator := 0; elevator < NumberOfElevators; elevator++ {
-					fmt.Println(queue[order.Floor].Cost[elevator])
-					if queue[order.Floor].Cost[elevator] == MaxCost {
+				for elevator := 0; elevator < NUMBER_OF_ELEVATORS; elevator++ {
+					fmt.Println(allOrders[order.Floor].Cost[elevator])
+					if allOrders[order.Floor].Cost[elevator] == MAXCOST {
 						allCostsPresent = false
 					}
 				}
 
 				if allCostsPresent || order.TimedOut {
-					queue[order.Floor].Status = Unconfirmed
-					go orderBuffer(queue[order.Floor], orderIn)
-					//go orderBuffer(queue[order.Floor], orderToNetworkChannel)
-					// Linjen over er kun redundancy, legg til hvis det ser ut som om det kan være et problem
+					allOrders[order.Floor].Status = Unconfirmed
+					go orderBuffer(allOrders[order.Floor], channels.OrderUpdate)
 				}
 
 			case Unconfirmed:
 				fmt.Println("*** STATUS Unconfirmed: \t", order.Floor)
-				if queue[order.Floor].Status > Unconfirmed {
+				if allOrders[order.Floor].Status > Unconfirmed {
 					fmt.Println("*** at higher status: \t", order.Floor)
 					break
 				}
 				if order.TimedOut == true {
-					queue[order.Floor].Cost[orderFindIdWithLowestCost(order)] = MaxCost
-					go orderBuffer(queue[order.Floor], orderIn)
+					allOrders[order.Floor].Cost[findIdWithLowestCost(order)] = MAXCOST
+					go orderBuffer(allOrders[order.Floor], channels.OrderUpdate)
 					break
 				}
 
-				if orderFindIdWithLowestCost(order) == ElevatorId {
-					fmt.Println("*** has LOWESTCOST: \t", order.Floor)
+				if findIdWithLowestCost(order) == ELEVATOR_ID {
+					fmt.Println("*** I have LOWEST COST: \t", order.Floor)
 					if elevatorState.CurrentFloor != order.Floor || elevatorState.Direction == elevio.MD_Stop {
-						queue[order.Floor].Status = Confirmed
+						allOrders[order.Floor].Status = Confirmed
 						order.Status = Confirmed
-						go orderBuffer(order, orderToNetworkChannel)
+						go orderBuffer(order, orderToPeers)
 					}
-					queue[order.Floor].Status = Mine
-					go orderBuffer(queue[order.Floor], orderIn)
+					allOrders[order.Floor].Status = Mine
+					go orderBuffer(allOrders[order.Floor], channels.OrderUpdate)
 				} else {
-					go orderTimer(queue[order.Floor], orderIn, 5)
+					go timingOrder(allOrders[order.Floor], channels.OrderUpdate, 5)
 				}
-				break
 
 			case Confirmed:
-				if queue[order.Floor].Status == NoActiveOrder {
+				/* Without this statement to break we might get a delayed answer and end up taking an order too many times,
+				   drastically improves performance */
+				if allOrders[order.Floor].Status == NotActive {
 					break
 				}
-				// Sette på lys
+
 				if order.DirectionUp == true {
 					elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, true)
 				}
 				if order.DirectionDown == true {
 					elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, true)
 				}
-				if queue[order.Floor].Status < Confirmed && order.TimedOut == false {
-					go orderBuffer(order, orderToNetworkChannel)
+				if allOrders[order.Floor].Status < Confirmed && order.TimedOut == false {
+					go orderBuffer(order, orderToPeers)
 				}
-			
+
 				fmt.Println("*** STATUS Confirmed: \t", order.Floor)
-				if queue[order.Floor].Status > Confirmed {
+				if allOrders[order.Floor].Status > Confirmed {
 					fmt.Println("*** at higher status: \t", order.Floor)
 					break
 				}
 
-				if order.TimedOut == true && queue[order.Floor].Status == Confirmed {
-					/*
-					if order.CabOrder == true {
-						break // Må utbedres
-					}
-					*/
-					queue[order.Floor].Status = Unconfirmed
+				if order.TimedOut == true && allOrders[order.Floor].Status == Confirmed {
+					allOrders[order.Floor].Status = Unconfirmed
 					order.Status = Unconfirmed
-					go orderBuffer(order, orderIn)
+					go orderBuffer(order, channels.OrderUpdate)
 					break
 				}
-				if queue[order.Floor].Status != Confirmed {
-					queue[order.Floor].Status = Confirmed
-					go orderTimer(queue[order.Floor], orderIn, order.Cost[orderFindIdWithLowestCost(order)]+DOOR_OPEN_TIME*NumberOfFloors)
+				if allOrders[order.Floor].Status != Confirmed {
+					allOrders[order.Floor].Status = Confirmed
+					go timingOrder(allOrders[order.Floor], channels.OrderUpdate, order.Cost[findIdWithLowestCost(order)]+DOOR_OPEN_TIME*NUMBER_OF_FLOORS)
 				}
-				//queue[order.Floor].Status = order.Status
-				 // Må endres til et uttrykk med costen
-				// Hva skjer hvis alle har MaxCost?
 
 			case Mine:
 				fmt.Println("*** STATUS Mine: \t", order.Floor)
-				if queue[order.Floor].Status > Mine {
+				if allOrders[order.Floor].Status > Mine {
 					fmt.Println("*** order with status Mine CANCELLED: \t", order.Floor)
 					break
 				}
@@ -228,66 +210,61 @@ func OrderDistributor(orderOut chan<- Order, orderIn chan Order, getElevatorStat
 				if order.TimedOut == true && order.CabOrder == false {
 					fmt.Println("** order with status Mine TIMEDOUT: \t", order.Floor)
 					order.Status = Confirmed
-					queue[order.Floor].Status = Confirmed
-					go orderBuffer(order, orderToNetworkChannel)
+					allOrders[order.Floor].Status = Confirmed
+					go orderBuffer(order, orderToPeers)
 					break
 				} else if order.TimedOut == true {
-					fmt.Println("*** ERROR: Could not expedite Caborder: \r", order.Floor)
 					break
 				}
 
-				// send til fsm
 				if order.DirectionUp == true {
-					queue[order.Floor].DirectionUp = true
+					allOrders[order.Floor].DirectionUp = true
 				}
 				if order.DirectionDown == true {
-					queue[order.Floor].DirectionDown = true
+					allOrders[order.Floor].DirectionDown = true
 				}
-				go orderBuffer(queue[order.Floor], orderOut)
+				go orderBuffer(allOrders[order.Floor], orderOut)
 				fmt.Println("*** ORDER SENT TO FSM: \t", order.Floor)
-				go orderTimer(order, orderIn, order.Cost[ElevatorId]*3+5)
+				go timingOrder(order, channels.OrderUpdate, order.Cost[ELEVATOR_ID]*3+5)
 				break
 
 			case Done:
 				fmt.Println("****** ORDER DONE: \t", order.Floor)
-				if order.FromId == ElevatorId {
-					go orderBuffer(order, orderToNetworkChannel)
+				if order.FromId == ELEVATOR_ID {
+					go orderBuffer(order, orderToPeers)
 					elevio.SetButtonLamp(elevio.BT_Cab, order.Floor, false)
 					order.CabOrder = false
 				}
 				elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, false)
 				elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, false)
 
-				order.Status = NoActiveOrder
+				order.Status = NotActive
 				order.DirectionUp = false
 				order.DirectionDown = false
-				
+
 				order.TimedOut = false
 				order.Timestamp = time.Now().Unix()
-				for elevatorNumber := 0; elevatorNumber < NumberOfElevators; elevatorNumber++ {
-					order.Cost[elevatorNumber] = MaxCost
+				for elevatorNumber := 0; elevatorNumber < NUMBER_OF_ELEVATORS; elevatorNumber++ {
+					order.Cost[elevatorNumber] = MAXCOST
 				}
-				queue[order.Floor] = order
+				allOrders[order.Floor] = order
 				break
 			}
 
-		case elevatorState = <- getElevatorState:
-			if elevatorState.Immobile && !elevatorImmobile {
-				for floor := 0; floor < NumberOfFloors; floor++ {
-					if queue[floor].Status == Mine {
-						//queue[floor].Cost[ElevatorId] = MaxCost
-						queue[floor].Status = Confirmed
-						queue[floor].TimedOut = true
-						go orderBuffer(queue[floor], orderToNetworkChannel)
-						queue[floor].DirectionUp = false
-						queue[floor].DirectionDown = false
-						
-						// Må queue cleares også?
+		case elevatorState = <-getElevatorState:
+			/* elevatorIsImmobile is a variable to only trigger this if once every time the elevator becomes immobile */
+			if elevatorState.Immobile && !elevatorIsImmobile {
+				for floor := 0; floor < NUMBER_OF_FLOORS; floor++ {
+					if allOrders[floor].Status == Mine {
+						allOrders[floor].Status = Confirmed
+						allOrders[floor].TimedOut = true
+						go orderBuffer(allOrders[floor], orderToPeers)
+						allOrders[floor].DirectionUp = false
+						allOrders[floor].DirectionDown = false
 					}
 				}
 			}
-			elevatorImmobile = elevatorState.Immobile
-			break
+			elevatorIsImmobile = elevatorState.Immobile
 
 		default:
 		}
