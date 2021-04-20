@@ -32,8 +32,8 @@ type Order struct {
 	DirectionDown bool
 	CabOrder      bool
 	Cost          [NUMBER_OF_ELEVATORS]int
-	Status        Status // 0: No active order , 1: waiting for cost, 2: unconfirmed, 3: confirmed, 4: mine, 5: done
-	TimedOut      bool   // Time? or Id?
+	Status        Status
+	TimedOut      bool
 	FromId        int
 	Timestamp     int64
 }

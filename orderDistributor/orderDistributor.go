@@ -40,7 +40,7 @@ func OrderDistributor(channels OrderDistributorChannels, orderOut chan<- Order, 
 		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false)
 	}
 
-	// For handling deadlock in channels.OrderUpdate
+	// Will clear deadlock in channels.OrderUpdate
 	startDraining := make(chan bool)
 	refreshTimer := make(chan time.Duration)
 	resetTime := time.Duration(10)
@@ -51,7 +51,6 @@ func OrderDistributor(channels OrderDistributorChannels, orderOut chan<- Order, 
 		refreshTimer <- resetTime
 
 		select {
-		// Order pipeline
 		case order := <-channels.OrderUpdate:
 
 			/* Turns on hall light if there already is an order in the opposite direction */
@@ -101,7 +100,7 @@ func OrderDistributor(channels OrderDistributorChannels, orderOut chan<- Order, 
 					fmt.Println("*** at higher status: \t", order.Floor, allOrders[order.Floor].Status)
 					break
 				}
-				// ???
+
 				if allOrders[order.Floor].DirectionUp == false && allOrders[order.Floor].DirectionDown == false {
 					allOrders[order.Floor].DirectionUp = order.DirectionUp
 					allOrders[order.Floor].DirectionDown = order.DirectionDown

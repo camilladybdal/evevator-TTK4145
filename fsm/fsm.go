@@ -11,13 +11,14 @@ import (
 )
 
 func InitFSM(numFloors int) {
+	elevio.SetDoorOpenLamp(false)
 	elevio.SetMotorDirection(elevio.MD_Down)
 	for elevio.GetFloor() != 0 {
 	}
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	elevio.SetFloorIndicator(0)
 
-	elevio.SetDoorOpenLamp(false)
+
 	fmt.Println("FSM Initialized ")
 }
 
