@@ -43,6 +43,5 @@ func main() {
 	go OrderDistributor(orderDistributorChannels, fsmChannels.NewOrder, fsmChannels.ElevatorState)
 	go RunElevator(fsmChannels, orderDistributorChannels.OrderUpdate)
 
-	for {
-	}
+	select {}
 }
