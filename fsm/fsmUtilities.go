@@ -12,19 +12,8 @@ import (
 	. "../types"
 )
 
-func InitFSM(numFloors int) {
-	elevio.SetMotorDirection(elevio.MD_Down)
-	for elevio.GetFloor() != 0 {
-	}
-	elevio.SetMotorDirection(elevio.MD_Stop)
-	elevio.SetFloorIndicator(0)
-
-	elevio.SetDoorOpenLamp(false)
-	fmt.Println("FSM Initialized ")
-}
-
 func goToNextInQueue(channels FsmChannels, elevatorInfo Elevator, QueueDirection *elevio.MotorDirection, nextFloor *int) {
-	*nextFloor = queueSearch(*QueueDirection, elevatorInfo)
+	*nextFloor = getNextFloorInQueue(*QueueDirection, elevatorInfo)
 	fmt.Println("---- floor im heading for is: ", *nextFloor)
 
 	dir := getDirection(elevatorInfo.CurrentFloor, *nextFloor)
@@ -46,14 +35,13 @@ func addToQueue(elevatorInfo *Elevator, newOrder Order) {
 		elevatorInfo.DownQueue[newOrder.Floor] = 1
 		fmt.Println("----Added to Downqueue")
 	}
-
 }
 
-func expidizeOrder(elevator Elevator, OrderUpdate chan<- Order) {
+func expediteOrder(elevator Elevator, OrderUpdate chan<- Order) {
 	var Expidized_order Order
 	Expidized_order.Floor = elevator.CurrentFloor
 	Expidized_order.Status = Done
-	Expidized_order.FromId = ElevatorId
+	Expidized_order.FromId = ELEVATOR_ID
 	OrderUpdate <- Expidized_order
 	fmt.Println("---- Order to floor :", Expidized_order.Floor, "is expidized")
 }
@@ -69,9 +57,9 @@ func getDirection(currentFloor int, destinationFloor int) elevio.MotorDirection 
 	}
 }
 
-func checkOrdersPresent(elevator Elevator) bool {
+func checkIfOrdersPresentInQueue(elevator Elevator) bool {
 	foundOrder := false
-	for i := 0; i < NumberOfFloors; i++ {
+	for i := 0; i < NUMBER_OF_FLOORS; i++ {
 		if elevator.UpQueue[i] == 1 || elevator.DownQueue[i] == 1 {
 			foundOrder = true
 		}
@@ -79,27 +67,22 @@ func checkOrdersPresent(elevator Elevator) bool {
 	return foundOrder
 }
 
-func queueSearch(QueueDirection elevio.MotorDirection, elevator Elevator) int {
+func getNextFloorInQueue(QueueDirection elevio.MotorDirection, elevator Elevator) int {
 	nextFloor := -1
 
-	//first times
 	if QueueDirection == elevio.MD_Stop {
 		QueueDirection = elevio.MD_Up
 	}
 
-	//for debugging: which floor is current of which
-	fmt.Println("---- QUEUESEARCH: current floor is ", elevator.CurrentFloor)
-	fmt.Println("---- QUEUESEARCH: Queuedirection is ", QueueDirection)
-
 	if QueueDirection == elevio.MD_Up {
-		for floor := elevator.CurrentFloor; floor < NumberOfFloors; floor++ {
+		for floor := elevator.CurrentFloor; floor < NUMBER_OF_FLOORS; floor++ {
 			if elevator.UpQueue[floor] == 1 {
 				nextFloor = floor
 
 				return nextFloor
 			}
 		}
-		for floor := NumberOfFloors - 1; floor >= 0; floor-- {
+		for floor := NUMBER_OF_FLOORS - 1; floor >= 0; floor-- {
 			if elevator.DownQueue[floor] == 1 {
 				nextFloor = floor
 				return nextFloor
@@ -121,22 +104,19 @@ func queueSearch(QueueDirection elevio.MotorDirection, elevator Elevator) int {
 				return nextFloor
 			}
 		}
-		for floor := 0; floor < NumberOfFloors; floor++ {
+		for floor := 0; floor < NUMBER_OF_FLOORS; floor++ {
 			if elevator.UpQueue[floor] == 1 {
 				nextFloor = floor
 				return nextFloor
 			}
 		}
-		for floor := NumberOfFloors - 1; floor >= 0; floor-- {
+		for floor := NUMBER_OF_FLOORS - 1; floor >= 0; floor-- {
 			if elevator.DownQueue[floor] == 1 {
 				nextFloor = floor
 				return nextFloor
 			}
 		}
 	}
-	//if nextFloor == -1 {
-	//	panic("problemo")
-	//}
 	return nextFloor
 }
 
@@ -145,19 +125,12 @@ func removeFromQueue(elevator *Elevator) {
 	elevator.DownQueue[elevator.CurrentFloor] = 0
 }
 
-////////////FILE/////////////
-func checkError(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
 func writeToBackUpFile(filename string, elevatorID int, elevator Elevator) {
 	id := strconv.Itoa(elevatorID)
 	file, err := os.Create(filename + id)
 	checkError(err)
 	var write string
-	for i := 0; i < NumberOfFloors; i++ {
+	for i := 0; i < NUMBER_OF_FLOORS; i++ {
 		if elevator.UpQueue[i] == 1 && elevator.DownQueue[i] == 1 {
 			write = write + "1"
 		} else {
@@ -171,10 +144,10 @@ func writeToBackUpFile(filename string, elevatorID int, elevator Elevator) {
 func readFromBackupFile(filename string, elevatorid int, elevator *Elevator) {
 	id := strconv.Itoa(elevatorid)
 	file, _ := os.Open(filename + id)
-	data := make([]byte, NumberOfFloors)
+	data := make([]byte, NUMBER_OF_FLOORS)
 	file.Read(data)
 
-	for i := 0; i < NumberOfFloors; i++ {
+	for i := 0; i < NUMBER_OF_FLOORS; i++ {
 		if string(data[i]) == "1" {
 			elevator.UpQueue[i] = 1
 			elevator.DownQueue[i] = 1
@@ -184,4 +157,10 @@ func readFromBackupFile(filename string, elevatorid int, elevator *Elevator) {
 		}
 	}
 	file.Close()
+}
+
+func checkError(e error) {
+	if e != nil {
+		panic(e)
+	}
 }
