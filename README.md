@@ -10,16 +10,16 @@ The OrderDistributer is the module that handles the interaction between the elev
 
 ### Module overview
 
-+ ADD STATE-DIAGRAM HERE
-+ ADD MODULE DIAGRAM HERE
+Here you will find some informal UML. The state diagram shows how our four states interact in the FSM, and the module-diagram shows which modules we have and what they consist of. 
+
+![picture](designDiagrams/class_diagram.png)
+![picture](designDiagrams/StateDiagram.png)
 
 
 ### Loaned code
 
 * elevator_io.go
-* bcast.go
-
-
+* bcast.go  
 
 
 
